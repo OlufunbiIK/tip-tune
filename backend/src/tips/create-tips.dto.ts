@@ -1,21 +1,33 @@
-import { IsUUID, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsUUID, IsOptional, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateTipDto {
-  @ApiProperty({ description: 'Artist ID receiving the tip', example: '550e8400-e29b-41d4-a716-446655440001' })
+  @ApiProperty({
+    description: "Artist ID receiving the tip",
+    example: "550e8400-e29b-41d4-a716-446655440001",
+  })
   @IsUUID()
   artistId: string;
 
-  @ApiPropertyOptional({ description: 'Track ID (optional)', example: '550e8400-e29b-41d4-a716-446655440002' })
+  @ApiPropertyOptional({
+    description: "Track ID (optional)",
+    example: "550e8400-e29b-41d4-a716-446655440002",
+  })
   @IsOptional()
   @IsUUID()
   trackId?: string;
 
-  @ApiProperty({ description: 'Stellar transaction hash', example: 'abc123def456...' })
+  @ApiProperty({
+    description: "Stellar transaction hash",
+    example: "abc123def456...",
+  })
   @IsString()
   stellarTxHash: string;
 
-  @ApiPropertyOptional({ description: 'Optional message with the tip', example: 'Love your music!' })
+  @ApiPropertyOptional({
+    description: "Optional message with the tip",
+    example: "Love your music!",
+  })
   @IsOptional()
   @IsString()
   message?: string;

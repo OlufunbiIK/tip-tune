@@ -1,18 +1,25 @@
-import { IsOptional, IsString, IsIn, IsNumber, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SEARCH_TYPES, SearchType } from './search-query.dto';
+import {
+  IsOptional,
+  IsString,
+  IsIn,
+  IsNumber,
+  Min,
+  Max,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { SEARCH_TYPES, SearchType } from "./search-query.dto";
 
 export class SearchSuggestionsQueryDto {
   @ApiProperty({
-    description: 'Partial search query for autocomplete',
-    example: 'roc',
+    description: "Partial search query for autocomplete",
+    example: "roc",
   })
   @IsString()
   q: string;
 
   @ApiPropertyOptional({
-    description: 'Limit to artist or track suggestions; both when omitted',
+    description: "Limit to artist or track suggestions; both when omitted",
     enum: SEARCH_TYPES,
   })
   @IsOptional()
@@ -20,7 +27,7 @@ export class SearchSuggestionsQueryDto {
   type?: SearchType;
 
   @ApiPropertyOptional({
-    description: 'Max number of suggestions to return',
+    description: "Max number of suggestions to return",
     default: 10,
     minimum: 1,
     maximum: 20,

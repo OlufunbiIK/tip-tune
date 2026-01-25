@@ -4,15 +4,15 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger } from "@nestjs/common";
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // Configure appropriately for production
+    origin: "*", // Configure appropriately for production
   },
-  namespace: 'notifications',
+  namespace: "notifications",
 })
 export class NotificationsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -36,18 +36,18 @@ export class NotificationsGateway
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('joinArtistRoom')
+  @SubscribeMessage("joinArtistRoom")
   handleJoinArtistRoom(client: Socket, artistId: string) {
     client.join(`artist:${artistId}`);
     this.logger.log(`Client ${client.id} joined room artist:${artistId}`);
-    return { event: 'joinedArtistRoom', data: artistId };
+    return { event: "joinedArtistRoom", data: artistId };
   }
 
   sendNotificationToUser(userId: string, payload: any) {
-    this.server.to(`user:${userId}`).emit('notification', payload);
+    this.server.to(`user:${userId}`).emit("notification", payload);
   }
 
   sendNotificationToArtist(artistId: string, payload: any) {
-    this.server.to(`artist:${artistId}`).emit('tipReceived', payload);
+    this.server.to(`artist:${artistId}`).emit("tipReceived", payload);
   }
 }

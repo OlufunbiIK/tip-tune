@@ -4,17 +4,17 @@ import {
   ConflictException,
   BadRequestException,
   Logger,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Follow, FollowingType } from './entities/follow.entity';
-import { Artist } from '../artists/entities/artist.entity';
-import { User } from '../users/entities/user.entity';
-import { ArtistsService } from '../artists/artists.service';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Follow, FollowingType } from "./entities/follow.entity";
+import { Artist } from "../artists/entities/artist.entity";
+import { User } from "../users/entities/user.entity";
+import { ArtistsService } from "../artists/artists.service";
 import {
   FollowPaginationQueryDto,
   PaginatedFollowResponseDto,
-} from './dto/pagination.dto';
+} from "./dto/pagination.dto";
 
 @Injectable()
 export class FollowsService {
@@ -49,7 +49,7 @@ export class FollowsService {
     });
 
     if (existing) {
-      throw new ConflictException('Already following this artist');
+      throw new ConflictException("Already following this artist");
     }
 
     const follow = this.followRepo.create({
@@ -77,7 +77,7 @@ export class FollowsService {
     });
 
     if (!follow) {
-      throw new NotFoundException('Follow relationship not found');
+      throw new NotFoundException("Follow relationship not found");
     }
 
     await this.followRepo.remove(follow);
@@ -101,8 +101,8 @@ export class FollowsService {
         followingId: artistId,
         followingType: FollowingType.ARTIST,
       },
-      relations: ['follower'],
-      order: { createdAt: 'DESC' },
+      relations: ["follower"],
+      order: { createdAt: "DESC" },
       skip,
       take: limit,
     });
@@ -146,7 +146,7 @@ export class FollowsService {
   > {
     const [follows, total] = await this.followRepo.findAndCount({
       where: { followerId: userId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip: ((pagination.page ?? 1) - 1) * (pagination.limit ?? 10),
       take: pagination.limit ?? 10,
     });
@@ -238,7 +238,7 @@ export class FollowsService {
     });
 
     if (!follow) {
-      throw new NotFoundException('Follow relationship not found');
+      throw new NotFoundException("Follow relationship not found");
     }
 
     follow.notificationsEnabled = notificationsEnabled;

@@ -4,13 +4,13 @@ import {
   Logger,
   Inject,
   forwardRef,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Activity, ActivityType, EntityType } from './entities/activity.entity';
-import { CreateActivityDto } from './dto/create-activity.dto';
-import { ActivityFeedQueryDto } from './dto/activity-feed-query.dto';
-import { UsersService } from '../users/users.service';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Activity, ActivityType, EntityType } from "./entities/activity.entity";
+import { CreateActivityDto } from "./dto/create-activity.dto";
+import { ActivityFeedQueryDto } from "./dto/activity-feed-query.dto";
+import { UsersService } from "../users/users.service";
 
 export interface PaginatedActivityResponse {
   data: Activity[];
@@ -62,28 +62,29 @@ export class ActivitiesService {
 
     // Build query
     const queryBuilder = this.activityRepository
-      .createQueryBuilder('activity')
-      .leftJoinAndSelect('activity.user', 'user')
+      .createQueryBuilder("activity")
+      .leftJoinAndSelect("activity.user", "user")
       .where(
-        '(activity.userId = :userId OR activity.userId IN (:...followedArtistIds))',
+        "(activity.userId = :userId OR activity.userId IN (:...followedArtistIds))",
         {
           userId,
-          followedArtistIds: followedArtists.length > 0 ? followedArtists : [''],
+          followedArtistIds:
+            followedArtists.length > 0 ? followedArtists : [""],
         },
       )
-      .orderBy('activity.createdAt', 'DESC')
+      .orderBy("activity.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
     // Apply filters
     if (activityType) {
-      queryBuilder.andWhere('activity.activityType = :activityType', {
+      queryBuilder.andWhere("activity.activityType = :activityType", {
         activityType,
       });
     }
 
     if (unseenOnly) {
-      queryBuilder.andWhere('activity.isSeen = :isSeen', { isSeen: false });
+      queryBuilder.andWhere("activity.isSeen = :isSeen", { isSeen: false });
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -118,21 +119,21 @@ export class ActivitiesService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.activityRepository
-      .createQueryBuilder('activity')
-      .leftJoinAndSelect('activity.user', 'user')
-      .where('activity.userId = :userId', { userId })
-      .orderBy('activity.createdAt', 'DESC')
+      .createQueryBuilder("activity")
+      .leftJoinAndSelect("activity.user", "user")
+      .where("activity.userId = :userId", { userId })
+      .orderBy("activity.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
     if (activityType) {
-      queryBuilder.andWhere('activity.activityType = :activityType', {
+      queryBuilder.andWhere("activity.activityType = :activityType", {
         activityType,
       });
     }
 
     if (unseenOnly) {
-      queryBuilder.andWhere('activity.isSeen = :isSeen', { isSeen: false });
+      queryBuilder.andWhere("activity.isSeen = :isSeen", { isSeen: false });
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -163,7 +164,7 @@ export class ActivitiesService {
     });
 
     if (!activity) {
-      throw new NotFoundException('Activity not found');
+      throw new NotFoundException("Activity not found");
     }
 
     activity.isSeen = true;
@@ -190,7 +191,7 @@ export class ActivitiesService {
     followedArtists: string[],
   ): Promise<number> {
     const followedArtistIds =
-      followedArtists.length > 0 ? followedArtists : [''];
+      followedArtists.length > 0 ? followedArtists : [""];
 
     return this.activityRepository.count({
       where: [

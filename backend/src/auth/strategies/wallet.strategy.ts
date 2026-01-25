@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { ExtractJwt, Strategy } from "passport-jwt";
+import { ConfigService } from "@nestjs/config";
+import { Request } from "express";
 
 export interface JwtPayload {
   sub: string;
@@ -11,25 +11,27 @@ export interface JwtPayload {
 }
 
 @Injectable()
-export class WalletStrategy extends PassportStrategy(Strategy, 'jwt') {
+export class WalletStrategy extends PassportStrategy(Strategy, "jwt") {
   constructor(private configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // Try to extract from cookies first
         (request: Request) => {
-          return request?.cookies?.['access_token'];
+          return request?.cookies?.["access_token"];
         },
         // Fallback to Authorization header
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'your-secret-key-change-in-production',
+      secretOrKey:
+        configService.get<string>("JWT_SECRET") ||
+        "your-secret-key-change-in-production",
     });
   }
 
   async validate(payload: JwtPayload) {
     if (!payload.sub || !payload.walletAddress) {
-      throw new UnauthorizedException('Invalid token payload');
+      throw new UnauthorizedException("Invalid token payload");
     }
 
     return {

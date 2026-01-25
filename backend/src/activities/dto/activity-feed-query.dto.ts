@@ -1,11 +1,11 @@
-import { IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ActivityType } from '../entities/activity.entity';
+import { IsOptional, IsEnum, IsInt, Min, Max } from "class-validator";
+import { Type } from "class-transformer";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { ActivityType } from "../entities/activity.entity";
 
 export class ActivityFeedQueryDto {
   @ApiPropertyOptional({
-    description: 'Page number',
+    description: "Page number",
     example: 1,
     minimum: 1,
   })
@@ -16,7 +16,7 @@ export class ActivityFeedQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: 'Items per page',
+    description: "Items per page",
     example: 20,
     minimum: 1,
     maximum: 100,
@@ -29,7 +29,7 @@ export class ActivityFeedQueryDto {
   limit?: number = 20;
 
   @ApiPropertyOptional({
-    description: 'Filter by activity type',
+    description: "Filter by activity type",
     enum: ActivityType,
     example: ActivityType.NEW_TRACK,
   })
@@ -38,7 +38,7 @@ export class ActivityFeedQueryDto {
   activityType?: ActivityType;
 
   @ApiPropertyOptional({
-    description: 'Filter to show only unseen activities',
+    description: "Filter to show only unseen activities",
     example: false,
   })
   @IsOptional()

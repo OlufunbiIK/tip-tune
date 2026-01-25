@@ -4,21 +4,21 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Playlist } from './entities/playlist.entity';
-import { PlaylistTrack } from './entities/playlist-track.entity';
-import { Track } from '../tracks/entities/track.entity';
-import { CreatePlaylistDto } from './dto/create-playlist.dto';
-import { UpdatePlaylistDto } from './dto/update-playlist.dto';
-import { AddTrackDto } from './dto/add-track.dto';
-import { ReorderTracksDto } from './dto/reorder-tracks.dto';
-import { DuplicatePlaylistDto } from './dto/duplicate-playlist.dto';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Playlist } from "./entities/playlist.entity";
+import { PlaylistTrack } from "./entities/playlist-track.entity";
+import { Track } from "../tracks/entities/track.entity";
+import { CreatePlaylistDto } from "./dto/create-playlist.dto";
+import { UpdatePlaylistDto } from "./dto/update-playlist.dto";
+import { AddTrackDto } from "./dto/add-track.dto";
+import { ReorderTracksDto } from "./dto/reorder-tracks.dto";
+import { DuplicatePlaylistDto } from "./dto/duplicate-playlist.dto";
 import {
   PlaylistPaginationDto,
   PaginatedPlaylistResponse,
-} from './dto/pagination.dto';
+} from "./dto/pagination.dto";
 
 @Injectable()
 export class PlaylistsService {
@@ -36,7 +36,10 @@ export class PlaylistsService {
   /**
    * Create a new playlist
    */
-  async create(userId: string, createPlaylistDto: CreatePlaylistDto): Promise<Playlist> {
+  async create(
+    userId: string,
+    createPlaylistDto: CreatePlaylistDto,
+  ): Promise<Playlist> {
     const playlist = this.playlistRepository.create({
       ...createPlaylistDto,
       userId,
@@ -46,7 +49,7 @@ export class PlaylistsService {
 
     const savedPlaylist = await this.playlistRepository.save(playlist);
     this.logger.log(`Playlist created: ${savedPlaylist.id} by user ${userId}`);
-    
+
     return savedPlaylist;
   }
 
@@ -61,18 +64,15 @@ export class PlaylistsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.playlistRepository
-      .createQueryBuilder('playlist')
-      .leftJoinAndSelect('playlist.user', 'user')
-      .where('playlist.userId = :userId', { userId });
+      .createQueryBuilder("playlist")
+      .leftJoinAndSelect("playlist.user", "user")
+      .where("playlist.userId = :userId", { userId });
 
     if (isPublic !== undefined) {
-      queryBuilder.andWhere('playlist.isPublic = :isPublic', { isPublic });
+      queryBuilder.andWhere("playlist.isPublic = :isPublic", { isPublic });
     }
 
-    queryBuilder
-      .orderBy('playlist.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+    queryBuilder.orderBy("playlist.createdAt", "DESC").skip(skip).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -99,10 +99,10 @@ export class PlaylistsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.playlistRepository
-      .createQueryBuilder('playlist')
-      .leftJoinAndSelect('playlist.user', 'user')
-      .where('playlist.isPublic = :isPublic', { isPublic: true })
-      .orderBy('playlist.createdAt', 'DESC')
+      .createQueryBuilder("playlist")
+      .leftJoinAndSelect("playlist.user", "user")
+      .where("playlist.isPublic = :isPublic", { isPublic: true })
+      .orderBy("playlist.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
@@ -127,7 +127,12 @@ export class PlaylistsService {
   async findOne(id: string, userId?: string): Promise<Playlist> {
     const playlist = await this.playlistRepository.findOne({
       where: { id },
-      relations: ['user', 'playlistTracks', 'playlistTracks.track', 'playlistTracks.track.artist'],
+      relations: [
+        "user",
+        "playlistTracks",
+        "playlistTracks.track",
+        "playlistTracks.track.artist",
+      ],
     });
 
     if (!playlist) {
@@ -136,7 +141,7 @@ export class PlaylistsService {
 
     // Check if user has access (owner or public)
     if (userId && playlist.userId !== userId && !playlist.isPublic) {
-      throw new ForbiddenException('You do not have access to this playlist');
+      throw new ForbiddenException("You do not have access to this playlist");
     }
 
     // Sort tracks by position
@@ -159,12 +164,12 @@ export class PlaylistsService {
 
     // Verify ownership
     if (playlist.userId !== userId) {
-      throw new ForbiddenException('You can only update your own playlists');
+      throw new ForbiddenException("You can only update your own playlists");
     }
 
     Object.assign(playlist, updatePlaylistDto);
     const updatedPlaylist = await this.playlistRepository.save(playlist);
-    
+
     this.logger.log(`Playlist updated: ${id}`);
     return updatedPlaylist;
   }
@@ -177,7 +182,7 @@ export class PlaylistsService {
 
     // Verify ownership
     if (playlist.userId !== userId) {
-      throw new ForbiddenException('You can only delete your own playlists');
+      throw new ForbiddenException("You can only delete your own playlists");
     }
 
     await this.playlistRepository.remove(playlist);
@@ -196,7 +201,7 @@ export class PlaylistsService {
 
     // Verify ownership
     if (playlist.userId !== userId) {
-      throw new ForbiddenException('You can only modify your own playlists');
+      throw new ForbiddenException("You can only modify your own playlists");
     }
 
     // Check if track exists
@@ -205,7 +210,9 @@ export class PlaylistsService {
     });
 
     if (!track) {
-      throw new NotFoundException(`Track with ID ${addTrackDto.trackId} not found`);
+      throw new NotFoundException(
+        `Track with ID ${addTrackDto.trackId} not found`,
+      );
     }
 
     // Check if track is already in playlist
@@ -217,7 +224,7 @@ export class PlaylistsService {
     });
 
     if (existingPlaylistTrack) {
-      throw new BadRequestException('Track is already in this playlist');
+      throw new BadRequestException("Track is already in this playlist");
     }
 
     // Determine position
@@ -225,23 +232,23 @@ export class PlaylistsService {
     if (addTrackDto.position !== undefined) {
       // Insert at specific position
       position = addTrackDto.position;
-      
+
       // Shift existing tracks
       await this.playlistTrackRepository
         .createQueryBuilder()
         .update(PlaylistTrack)
-        .set({ position: () => 'position + 1' })
-        .where('playlistId = :playlistId', { playlistId })
-        .andWhere('position >= :position', { position })
+        .set({ position: () => "position + 1" })
+        .where("playlistId = :playlistId", { playlistId })
+        .andWhere("position >= :position", { position })
         .execute();
     } else {
       // Add to end
       const maxPosition = await this.playlistTrackRepository
-        .createQueryBuilder('pt')
-        .select('MAX(pt.position)', 'max')
-        .where('pt.playlistId = :playlistId', { playlistId })
+        .createQueryBuilder("pt")
+        .select("MAX(pt.position)", "max")
+        .where("pt.playlistId = :playlistId", { playlistId })
         .getRawOne();
-      
+
       position = maxPosition?.max !== null ? maxPosition.max + 1 : 0;
     }
 
@@ -259,7 +266,9 @@ export class PlaylistsService {
     playlist.totalDuration += track.duration || 0;
     await this.playlistRepository.save(playlist);
 
-    this.logger.log(`Track ${addTrackDto.trackId} added to playlist ${playlistId} at position ${position}`);
+    this.logger.log(
+      `Track ${addTrackDto.trackId} added to playlist ${playlistId} at position ${position}`,
+    );
 
     return this.findOne(playlistId, userId);
   }
@@ -276,7 +285,7 @@ export class PlaylistsService {
 
     // Verify ownership
     if (playlist.userId !== userId) {
-      throw new ForbiddenException('You can only modify your own playlists');
+      throw new ForbiddenException("You can only modify your own playlists");
     }
 
     const playlistTrack = await this.playlistTrackRepository.findOne({
@@ -284,11 +293,11 @@ export class PlaylistsService {
         playlistId,
         trackId,
       },
-      relations: ['track'],
+      relations: ["track"],
     });
 
     if (!playlistTrack) {
-      throw new NotFoundException('Track not found in this playlist');
+      throw new NotFoundException("Track not found in this playlist");
     }
 
     const removedPosition = playlistTrack.position;
@@ -300,15 +309,18 @@ export class PlaylistsService {
     await this.playlistTrackRepository
       .createQueryBuilder()
       .update(PlaylistTrack)
-      .set({ position: () => 'position - 1' })
-      .where('playlistId = :playlistId', { playlistId })
-      .andWhere('position > :position', { position: removedPosition })
+      .set({ position: () => "position - 1" })
+      .where("playlistId = :playlistId", { playlistId })
+      .andWhere("position > :position", { position: removedPosition })
       .execute();
 
     // Update playlist metadata
     playlist.trackCount -= 1;
     if (playlistTrack.track) {
-      playlist.totalDuration = Math.max(0, playlist.totalDuration - (playlistTrack.track.duration || 0));
+      playlist.totalDuration = Math.max(
+        0,
+        playlist.totalDuration - (playlistTrack.track.duration || 0),
+      );
     }
     await this.playlistRepository.save(playlist);
 
@@ -329,7 +341,7 @@ export class PlaylistsService {
 
     // Verify ownership
     if (playlist.userId !== userId) {
-      throw new ForbiddenException('You can only modify your own playlists');
+      throw new ForbiddenException("You can only modify your own playlists");
     }
 
     // Validate all tracks belong to the playlist
@@ -342,7 +354,7 @@ export class PlaylistsService {
     });
 
     if (existingTracks.length !== trackIds.length) {
-      throw new BadRequestException('Some tracks are not in this playlist');
+      throw new BadRequestException("Some tracks are not in this playlist");
     }
 
     // Update positions
@@ -370,7 +382,7 @@ export class PlaylistsService {
 
     // Check if user has access (owner or public)
     if (originalPlaylist.userId !== userId && !originalPlaylist.isPublic) {
-      throw new ForbiddenException('You do not have access to this playlist');
+      throw new ForbiddenException("You do not have access to this playlist");
     }
 
     // Create new playlist
@@ -387,7 +399,10 @@ export class PlaylistsService {
     const savedPlaylist = await this.playlistRepository.save(newPlaylist);
 
     // Copy tracks
-    if (originalPlaylist.playlistTracks && originalPlaylist.playlistTracks.length > 0) {
+    if (
+      originalPlaylist.playlistTracks &&
+      originalPlaylist.playlistTracks.length > 0
+    ) {
       const playlistTracks = originalPlaylist.playlistTracks.map((pt, index) =>
         this.playlistTrackRepository.create({
           playlistId: savedPlaylist.id,
@@ -421,21 +436,20 @@ export class PlaylistsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.playlistRepository
-      .createQueryBuilder('playlist')
-      .leftJoinAndSelect('playlist.user', 'user')
-      .where('playlist.userId = :targetUserId', { targetUserId });
+      .createQueryBuilder("playlist")
+      .leftJoinAndSelect("playlist.user", "user")
+      .where("playlist.userId = :targetUserId", { targetUserId });
 
     // If not the owner, only show public playlists
     if (requestingUserId !== targetUserId) {
-      queryBuilder.andWhere('playlist.isPublic = :isPublic', { isPublic: true });
+      queryBuilder.andWhere("playlist.isPublic = :isPublic", {
+        isPublic: true,
+      });
     } else if (isPublic !== undefined) {
-      queryBuilder.andWhere('playlist.isPublic = :isPublic', { isPublic });
+      queryBuilder.andWhere("playlist.isPublic = :isPublic", { isPublic });
     }
 
-    queryBuilder
-      .orderBy('playlist.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+    queryBuilder.orderBy("playlist.createdAt", "DESC").skip(skip).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -456,7 +470,10 @@ export class PlaylistsService {
    * Share playlist - returns shareable link/info
    * In a real app, this might generate a share token or handle permissions
    */
-  async share(playlistId: string, userId: string): Promise<{
+  async share(
+    playlistId: string,
+    userId: string,
+  ): Promise<{
     playlistId: string;
     shareUrl: string;
     isPublic: boolean;
@@ -466,7 +483,7 @@ export class PlaylistsService {
 
     // Verify ownership
     if (playlist.userId !== userId) {
-      throw new ForbiddenException('You can only share your own playlists');
+      throw new ForbiddenException("You can only share your own playlists");
     }
 
     // Make playlist public if it's not already
@@ -481,7 +498,7 @@ export class PlaylistsService {
       playlistId: playlist.id,
       shareUrl,
       isPublic: playlist.isPublic,
-      message: 'Playlist is now public and shareable',
+      message: "Playlist is now public and shareable",
     };
   }
 }

@@ -1,17 +1,22 @@
-import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { TipStatus } from './tips.entity';
+import { IsOptional, IsInt, Min, Max, IsEnum } from "class-validator";
+import { Type } from "class-transformer";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { TipStatus } from "./tips.entity";
 
 export class PaginationQueryDto {
-  @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })
+  @ApiPropertyOptional({ description: "Page number", default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', default: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    description: "Items per page",
+    default: 10,
+    minimum: 1,
+    maximum: 100,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -19,17 +24,17 @@ export class PaginationQueryDto {
   @Max(100)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ description: 'Filter by status', enum: TipStatus })
+  @ApiPropertyOptional({ description: "Filter by status", enum: TipStatus })
   @IsOptional()
   @IsEnum(TipStatus)
   status?: TipStatus;
 }
 
 export class PaginatedResponseDto<T> {
-  @ApiPropertyOptional({ description: 'Array of items' })
+  @ApiPropertyOptional({ description: "Array of items" })
   data: T[];
 
-  @ApiPropertyOptional({ description: 'Pagination metadata' })
+  @ApiPropertyOptional({ description: "Pagination metadata" })
   meta: {
     total: number;
     page: number;

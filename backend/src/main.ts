@@ -1,8 +1,8 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import * as cookieParser from 'cookie-parser';
-import { AppModule } from './app.module';
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import * as cookieParser from "cookie-parser";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
   });
 
@@ -26,23 +26,23 @@ async function bootstrap() {
   );
 
   // API prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix("api");
 
   // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('TipTune API')
-    .setDescription('API for TipTune audio upload and streaming platform')
-    .setVersion('1.0')
-    .addTag('tracks')
-    .addTag('users')
-    .addTag('search')
-    .addTag('Authentication')
+    .setTitle("TipTune API")
+    .setDescription("API for TipTune audio upload and streaming platform")
+    .setVersion("1.0")
+    .addTag("tracks")
+    .addTag("users")
+    .addTag("search")
+    .addTag("Authentication")
     .addBearerAuth()
-    .addCookieAuth('access_token')
+    .addCookieAuth("access_token")
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup("api/docs", app, document);
 
   const port = process.env.PORT || 3001;
   await app.listen(port);

@@ -6,13 +6,13 @@ import {
   OnGatewayDisconnect,
   MessageBody,
   ConnectedSocket,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
-import { Tip } from '../tips/entities/tip.entity';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger } from "@nestjs/common";
+import { Tip } from "../tips/entities/tip.entity";
 
 export interface TipNotificationData {
-  type: 'tip_received';
+  type: "tip_received";
   data: {
     tipId: string;
     artistId: string;
@@ -30,13 +30,15 @@ export interface TipNotificationData {
 
 @WSGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
     credentials: true,
   },
-  namespace: '/tips',
+  namespace: "/tips",
 })
-export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class WebSocketGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -48,8 +50,8 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.connectedClients.set(client.id, client);
 
     // Send welcome message
-    client.emit('connected', {
-      message: 'Connected to TipTune WebSocket',
+    client.emit("connected", {
+      message: "Connected to TipTune WebSocket",
       clientId: client.id,
     });
   }
@@ -59,7 +61,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.connectedClients.delete(client.id);
   }
 
-  @SubscribeMessage('join_artist_room')
+  @SubscribeMessage("join_artist_room")
   handleJoinArtistRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { artistId: string },
@@ -67,11 +69,11 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     const room = `artist_${data.artistId}`;
     client.join(room);
     this.logger.log(`Client ${client.id} joined room: ${room}`);
-    
-    client.emit('joined_room', { room, artistId: data.artistId });
+
+    client.emit("joined_room", { room, artistId: data.artistId });
   }
 
-  @SubscribeMessage('leave_artist_room')
+  @SubscribeMessage("leave_artist_room")
   handleLeaveArtistRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { artistId: string },
@@ -79,11 +81,11 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     const room = `artist_${data.artistId}`;
     client.leave(room);
     this.logger.log(`Client ${client.id} left room: ${room}`);
-    
-    client.emit('left_room', { room, artistId: data.artistId });
+
+    client.emit("left_room", { room, artistId: data.artistId });
   }
 
-  @SubscribeMessage('join_track_room')
+  @SubscribeMessage("join_track_room")
   handleJoinTrackRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { trackId: string },
@@ -91,11 +93,11 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     const room = `track_${data.trackId}`;
     client.join(room);
     this.logger.log(`Client ${client.id} joined room: ${room}`);
-    
-    client.emit('joined_room', { room, trackId: data.trackId });
+
+    client.emit("joined_room", { room, trackId: data.trackId });
   }
 
-  @SubscribeMessage('leave_track_room')
+  @SubscribeMessage("leave_track_room")
   handleLeaveTrackRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { trackId: string },
@@ -103,13 +105,13 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     const room = `track_${data.trackId}`;
     client.leave(room);
     this.logger.log(`Client ${client.id} left room: ${room}`);
-    
-    client.emit('left_room', { room, trackId: data.trackId });
+
+    client.emit("left_room", { room, trackId: data.trackId });
   }
 
-  @SubscribeMessage('ping')
+  @SubscribeMessage("ping")
   handlePing(@ConnectedSocket() client: Socket): void {
-    client.emit('pong', { timestamp: new Date() });
+    client.emit("pong", { timestamp: new Date() });
   }
 
   /**
@@ -118,7 +120,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
   async sendTipNotification(tip: Tip): Promise<void> {
     try {
       const notificationData: TipNotificationData = {
-        type: 'tip_received',
+        type: "tip_received",
         data: {
           tipId: tip.id,
           artistId: tip.artistId,
@@ -136,20 +138,19 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       // Send to artist room
       const artistRoom = `artist_${tip.artistId}`;
-      this.server.to(artistRoom).emit('tip_notification', notificationData);
+      this.server.to(artistRoom).emit("tip_notification", notificationData);
       this.logger.log(`Sent tip notification to room: ${artistRoom}`);
 
       // Send to track room if track is specified
       if (tip.trackId) {
         const trackRoom = `track_${tip.trackId}`;
-        this.server.to(trackRoom).emit('tip_notification', notificationData);
+        this.server.to(trackRoom).emit("tip_notification", notificationData);
         this.logger.log(`Sent tip notification to room: ${trackRoom}`);
       }
 
       // Send to all connected clients for global notifications
-      this.server.emit('global_tip_notification', notificationData);
+      this.server.emit("global_tip_notification", notificationData);
       this.logger.log(`Sent global tip notification`);
-
     } catch (error) {
       this.logger.error(`Failed to send tip notification: ${error.message}`);
     }
@@ -158,7 +159,11 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
   /**
    * Send general notification
    */
-  async sendNotification(event: string, data: any, room?: string): Promise<void> {
+  async sendNotification(
+    event: string,
+    data: any,
+    room?: string,
+  ): Promise<void> {
     try {
       if (room) {
         this.server.to(room).emit(event, data);
@@ -190,15 +195,18 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
   /**
    * Broadcast system message
    */
-  async broadcastSystemMessage(message: string, type: 'info' | 'warning' | 'error' = 'info'): Promise<void> {
+  async broadcastSystemMessage(
+    message: string,
+    type: "info" | "warning" | "error" = "info",
+  ): Promise<void> {
     const data = {
-      type: 'system_message',
+      type: "system_message",
       message,
       messageType: type,
       timestamp: new Date(),
     };
 
-    await this.sendNotification('system_message', data);
+    await this.sendNotification("system_message", data);
     this.logger.log(`Broadcast system message: ${message}`);
   }
 }

@@ -6,76 +6,76 @@ import {
   IsDateString,
   Min,
   Max,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
-export const SEARCH_TYPES = ['artist', 'track'] as const;
+export const SEARCH_TYPES = ["artist", "track"] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
 
 export const SORT_OPTIONS = [
-  'relevance',
-  'recent',
-  'popular',
-  'alphabetical',
-  'popular_tips',
-  'popular_plays',
+  "relevance",
+  "recent",
+  "popular",
+  "alphabetical",
+  "popular_tips",
+  "popular_plays",
 ] as const;
 export type SortOption = (typeof SORT_OPTIONS)[number];
 
 export class SearchQueryDto {
   @ApiPropertyOptional({
-    description: 'Search query (artist names, track titles, genres, bios)',
-    example: 'rock',
+    description: "Search query (artist names, track titles, genres, bios)",
+    example: "rock",
   })
   @IsOptional()
   @IsString()
   q?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by type: artist, track, or both when omitted',
+    description: "Filter by type: artist, track, or both when omitted",
     enum: SEARCH_TYPES,
-    example: 'track',
+    example: "track",
   })
   @IsOptional()
   @IsIn(SEARCH_TYPES)
   type?: SearchType;
 
   @ApiPropertyOptional({
-    description: 'Filter by genre',
-    example: 'pop',
+    description: "Filter by genre",
+    example: "pop",
   })
   @IsOptional()
   @IsString()
   genre?: string;
 
   @ApiPropertyOptional({
-    description: 'Release date from (YYYY-MM-DD)',
-    example: '2020-01-01',
+    description: "Release date from (YYYY-MM-DD)",
+    example: "2020-01-01",
   })
   @IsOptional()
   @IsDateString()
   releaseDateFrom?: string;
 
   @ApiPropertyOptional({
-    description: 'Release date to (YYYY-MM-DD)',
-    example: '2024-12-31',
+    description: "Release date to (YYYY-MM-DD)",
+    example: "2024-12-31",
   })
   @IsOptional()
   @IsDateString()
   releaseDateTo?: string;
 
   @ApiPropertyOptional({
-    description: 'Sort order',
+    description: "Sort order",
     enum: SORT_OPTIONS,
-    default: 'relevance',
+    default: "relevance",
   })
   @IsOptional()
   @IsIn(SORT_OPTIONS)
-  sort?: SortOption = 'relevance';
+  sort?: SortOption = "relevance";
 
   @ApiPropertyOptional({
-    description: 'Page number (1-based)',
+    description: "Page number (1-based)",
     default: 1,
     minimum: 1,
   })
@@ -86,7 +86,7 @@ export class SearchQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: 'Items per page',
+    description: "Items per page",
     default: 10,
     minimum: 1,
     maximum: 100,

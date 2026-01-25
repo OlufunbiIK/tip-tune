@@ -1,20 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { ChallengeResponseDto } from './dto/challenge.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
-import { User } from '../users/entities/user.entity';
+import { Test, TestingModule } from "@nestjs/testing";
+import { UnauthorizedException } from "@nestjs/common";
+import { AuthController } from "./auth.controller";
+import { AuthService } from "./auth.service";
+import { ChallengeResponseDto } from "./dto/challenge.dto";
+import { AuthResponseDto } from "./dto/auth-response.dto";
+import { User } from "../users/entities/user.entity";
 
-describe('AuthController', () => {
+describe("AuthController", () => {
   let controller: AuthController;
   let authService: AuthService;
 
   const mockUser: User = {
-    id: 'user-123',
-    username: 'testuser',
-    email: 'test@example.com',
-    walletAddress: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+    id: "user-123",
+    username: "testuser",
+    email: "test@example.com",
+    walletAddress: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     profileImage: null,
     bio: null,
     isArtist: false,
@@ -49,12 +49,13 @@ describe('AuthController', () => {
     jest.clearAllMocks();
   });
 
-  describe('generateChallenge', () => {
-    it('should generate challenge', async () => {
-      const publicKey = 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  describe("generateChallenge", () => {
+    it("should generate challenge", async () => {
+      const publicKey =
+        "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
       const challengeResponse: ChallengeResponseDto = {
-        challengeId: 'challenge-123',
-        challenge: 'Sign this message...',
+        challengeId: "challenge-123",
+        challenge: "Sign this message...",
         expiresAt: new Date().toISOString(),
       };
 
@@ -67,17 +68,17 @@ describe('AuthController', () => {
     });
   });
 
-  describe('verifySignature', () => {
-    it('should verify signature and return tokens', async () => {
+  describe("verifySignature", () => {
+    it("should verify signature and return tokens", async () => {
       const verifyDto = {
-        challengeId: 'challenge-123',
-        publicKey: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-        signature: 'signature',
+        challengeId: "challenge-123",
+        publicKey: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        signature: "signature",
       };
 
       const authResponse: AuthResponseDto = {
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
         user: mockUser,
       };
 
@@ -95,10 +96,10 @@ describe('AuthController', () => {
     });
   });
 
-  describe('refreshToken', () => {
-    it('should refresh access token', async () => {
+  describe("refreshToken", () => {
+    it("should refresh access token", async () => {
       const mockRequest = {
-        cookies: { refresh_token: 'refresh-token' },
+        cookies: { refresh_token: "refresh-token" },
         headers: {},
       } as any;
 
@@ -107,16 +108,16 @@ describe('AuthController', () => {
       } as any;
 
       mockAuthService.refreshAccessToken.mockResolvedValue({
-        accessToken: 'new-access-token',
+        accessToken: "new-access-token",
       });
 
       const result = await controller.refreshToken(mockRequest, mockResponse);
 
-      expect(result).toEqual({ accessToken: 'new-access-token' });
+      expect(result).toEqual({ accessToken: "new-access-token" });
       expect(mockResponse.cookie).toHaveBeenCalled();
     });
 
-    it('should throw UnauthorizedException when no refresh token', async () => {
+    it("should throw UnauthorizedException when no refresh token", async () => {
       const mockRequest = {
         cookies: {},
         headers: {},
@@ -132,10 +133,10 @@ describe('AuthController', () => {
     });
   });
 
-  describe('logout', () => {
-    it('should logout and clear cookies', async () => {
+  describe("logout", () => {
+    it("should logout and clear cookies", async () => {
       const mockRequest = {
-        cookies: { refresh_token: 'refresh-token' },
+        cookies: { refresh_token: "refresh-token" },
         headers: {},
       } as any;
 
@@ -147,17 +148,18 @@ describe('AuthController', () => {
 
       const result = await controller.logout(mockRequest, mockResponse);
 
-      expect(result).toEqual({ message: 'Logout successful' });
+      expect(result).toEqual({ message: "Logout successful" });
       expect(mockResponse.clearCookie).toHaveBeenCalledTimes(2);
-      expect(authService.logout).toHaveBeenCalledWith('refresh-token');
+      expect(authService.logout).toHaveBeenCalledWith("refresh-token");
     });
   });
 
-  describe('getCurrentUser', () => {
-    it('should return current user', async () => {
+  describe("getCurrentUser", () => {
+    it("should return current user", async () => {
       const mockUserData = {
-        userId: 'user-123',
-        walletAddress: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+        userId: "user-123",
+        walletAddress:
+          "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         isArtist: false,
       };
 
@@ -166,7 +168,7 @@ describe('AuthController', () => {
       const result = await controller.getCurrentUser(mockUserData);
 
       expect(result).toEqual(mockUser);
-      expect(authService.getCurrentUser).toHaveBeenCalledWith('user-123');
+      expect(authService.getCurrentUser).toHaveBeenCalledWith("user-123");
     });
   });
 });

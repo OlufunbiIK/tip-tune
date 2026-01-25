@@ -7,13 +7,13 @@ import {
   Body,
   Req,
   UseGuards,
-} from '@nestjs/common';
-import { ArtistsService } from './artists.service';
-import { CreateArtistDto } from './dto/create-artist.dto';
-import { UpdateArtistDto } from './dto/update-artist.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+} from "@nestjs/common";
+import { ArtistsService } from "./artists.service";
+import { CreateArtistDto } from "./dto/create-artist.dto";
+import { UpdateArtistDto } from "./dto/update-artist.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
-@Controller('artists')
+@Controller("artists")
 @UseGuards(JwtAuthGuard)
 export class ArtistsController {
   constructor(private readonly artistsService: ArtistsService) {}
@@ -28,17 +28,17 @@ export class ArtistsController {
     return this.artistsService.findAll();
   }
 
-  @Get('me')
+  @Get("me")
   findMyArtist(@Req() req) {
     return this.artistsService.findByUser(req.user.id);
   }
 
-  @Patch('me')
+  @Patch("me")
   update(@Req() req, @Body() dto: UpdateArtistDto) {
     return this.artistsService.update(req.user.id, dto);
   }
 
-  @Delete('me')
+  @Delete("me")
   remove(@Req() req) {
     return this.artistsService.remove(req.user.id);
   }

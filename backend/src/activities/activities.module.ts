@@ -1,9 +1,9 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ActivitiesController } from './activities.controller';
-import { ActivitiesService } from './activities.service';
-import { Activity } from './entities/activity.entity';
-import { UsersModule } from '../users/users.module';
+import { Module, forwardRef } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { ActivitiesController } from "./activities.controller";
+import { ActivitiesService } from "./activities.service";
+import { Activity } from "./entities/activity.entity";
+import { UsersModule } from "../users/users.module";
 
 @Module({
   imports: [

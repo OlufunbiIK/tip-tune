@@ -7,39 +7,39 @@ import {
   JoinColumn,
   Index,
   Unique,
-} from 'typeorm';
-import { Playlist } from './playlist.entity';
-import { Track } from '../../tracks/entities/track.entity';
+} from "typeorm";
+import { Playlist } from "./playlist.entity";
+import { Track } from "../../tracks/entities/track.entity";
 
-@Entity('playlist_tracks')
-@Unique(['playlistId', 'trackId']) // Prevent duplicate tracks in same playlist
-@Index(['playlistId', 'position'])
+@Entity("playlist_tracks")
+@Unique(["playlistId", "trackId"]) // Prevent duplicate tracks in same playlist
+@Index(["playlistId", "position"])
 export class PlaylistTrack {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   @Index()
   playlistId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   @Index()
   trackId: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: "int" })
   position: number; // Order in playlist (0-based or 1-based)
 
-  @CreateDateColumn({ name: 'added_at' })
+  @CreateDateColumn({ name: "added_at" })
   addedAt: Date;
 
   // Relationships
   @ManyToOne(() => Playlist, (playlist) => playlist.playlistTracks, {
-    onDelete: 'CASCADE',
+    onDelete: "CASCADE",
   })
-  @JoinColumn({ name: 'playlistId' })
+  @JoinColumn({ name: "playlistId" })
   playlist: Playlist;
 
-  @ManyToOne(() => Track, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'trackId' })
+  @ManyToOne(() => Track, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "trackId" })
   track: Track;
 }

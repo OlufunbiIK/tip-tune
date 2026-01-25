@@ -3,18 +3,18 @@ import {
   UnauthorizedException,
   BadRequestException,
   Logger,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
-import * as StellarSdk from '@stellar/stellar-sdk';
-import { User } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
-import { VerifySignatureDto } from './dto/verify-signature.dto';
-import { ChallengeResponseDto } from './dto/challenge.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { v4 as uuidv4 } from "uuid";
+import * as StellarSdk from "@stellar/stellar-sdk";
+import { User } from "../users/entities/user.entity";
+import { UsersService } from "../users/users.service";
+import { VerifySignatureDto } from "./dto/verify-signature.dto";
+import { ChallengeResponseDto } from "./dto/challenge.dto";
+import { AuthResponseDto } from "./dto/auth-response.dto";
 
 interface Challenge {
   challengeId: string;
@@ -34,8 +34,8 @@ export class AuthService {
   private readonly challenges: Map<string, Challenge> = new Map();
   private readonly refreshTokens: Map<string, RefreshTokenPayload> = new Map();
   private readonly challengeExpirationMinutes = 5;
-  private readonly accessTokenExpiration = '15m';
-  private readonly refreshTokenExpiration = '7d';
+  private readonly accessTokenExpiration = "15m";
+  private readonly refreshTokenExpiration = "7d";
 
   constructor(
     private readonly jwtService: JwtService,
@@ -54,7 +54,7 @@ export class AuthService {
   async generateChallenge(publicKey: string): Promise<ChallengeResponseDto> {
     // Validate Stellar public key format
     if (!this.isValidStellarPublicKey(publicKey)) {
-      throw new BadRequestException('Invalid Stellar public key format');
+      throw new BadRequestException("Invalid Stellar public key format");
     }
 
     const challengeId = uuidv4();
@@ -62,7 +62,9 @@ export class AuthService {
     const challenge = `Sign this message to authenticate with TipTune:\n\nChallenge ID: ${challengeId}\nTimestamp: ${timestamp}\nPublic Key: ${publicKey}`;
 
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + this.challengeExpirationMinutes);
+    expiresAt.setMinutes(
+      expiresAt.getMinutes() + this.challengeExpirationMinutes,
+    );
 
     const challengeData: Challenge = {
       challengeId,
@@ -73,7 +75,9 @@ export class AuthService {
 
     this.challenges.set(challengeId, challengeData);
 
-    this.logger.debug(`Generated challenge for public key: ${publicKey.substring(0, 8)}...`);
+    this.logger.debug(
+      `Generated challenge for public key: ${publicKey.substring(0, 8)}...`,
+    );
 
     return {
       challengeId,
@@ -93,18 +97,18 @@ export class AuthService {
     // Retrieve challenge
     const challenge = this.challenges.get(challengeId);
     if (!challenge) {
-      throw new UnauthorizedException('Invalid or expired challenge');
+      throw new UnauthorizedException("Invalid or expired challenge");
     }
 
     // Check expiration
     if (new Date() > challenge.expiresAt) {
       this.challenges.delete(challengeId);
-      throw new UnauthorizedException('Challenge has expired');
+      throw new UnauthorizedException("Challenge has expired");
     }
 
     // Verify public key matches challenge
     if (challenge.publicKey !== publicKey) {
-      throw new UnauthorizedException('Public key does not match challenge');
+      throw new UnauthorizedException("Public key does not match challenge");
     }
 
     // Verify signature using Stellar SDK
@@ -115,7 +119,7 @@ export class AuthService {
     );
 
     if (!isValid) {
-      throw new UnauthorizedException('Invalid signature');
+      throw new UnauthorizedException("Invalid signature");
     }
 
     // Remove used challenge
@@ -141,7 +145,9 @@ export class AuthService {
     // Generate tokens
     const tokens = await this.generateTokens(user);
 
-    this.logger.log(`User authenticated: ${user.id} (${publicKey.substring(0, 8)}...)`);
+    this.logger.log(
+      `User authenticated: ${user.id} (${publicKey.substring(0, 8)}...)`,
+    );
 
     return {
       ...tokens,
@@ -163,15 +169,15 @@ export class AuthService {
       // Decode base64 signature
       let signatureBuffer: Buffer;
       try {
-        signatureBuffer = Buffer.from(signature, 'base64');
+        signatureBuffer = Buffer.from(signature, "base64");
       } catch {
         // If base64 decode fails, try hex
-        signatureBuffer = Buffer.from(signature, 'hex');
+        signatureBuffer = Buffer.from(signature, "hex");
       }
 
       // Verify signature using Stellar SDK
       const keypair = StellarSdk.Keypair.fromPublicKey(publicKey);
-      const messageBuffer = Buffer.from(message, 'utf8');
+      const messageBuffer = Buffer.from(message, "utf8");
 
       // Stellar uses Ed25519 signatures
       // The verify method checks if the signature is valid for the message
@@ -222,18 +228,20 @@ export class AuthService {
   /**
    * Refresh access token using refresh token
    */
-  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string }> {
+  async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<{ accessToken: string }> {
     try {
       const payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
-      
+
       if (!payload.tokenId || !payload.userId) {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException("Invalid refresh token");
       }
 
       // Verify token exists in our store
       const storedToken = this.refreshTokens.get(payload.tokenId);
       if (!storedToken || storedToken.userId !== payload.userId) {
-        throw new UnauthorizedException('Refresh token not found or invalid');
+        throw new UnauthorizedException("Refresh token not found or invalid");
       }
 
       // Get user
@@ -242,7 +250,7 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new UnauthorizedException('User not found');
+        throw new UnauthorizedException("User not found");
       }
 
       // Generate new access token
@@ -264,7 +272,7 @@ export class AuthService {
         throw error;
       }
       this.logger.error(`Token refresh failed: ${error.message}`);
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException("Invalid or expired refresh token");
     }
   }
 
@@ -293,7 +301,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     return user;

@@ -13,7 +13,7 @@ import { UpdateArtistDto } from "./dto/update-artist.dto";
 export class ArtistsService {
   constructor(
     @InjectRepository(Artist)
-    private readonly artistRepo: Repository<Artist>
+    private readonly artistRepo: Repository<Artist>,
   ) {}
 
   async create(userId: string, dto: CreateArtistDto): Promise<Artist> {

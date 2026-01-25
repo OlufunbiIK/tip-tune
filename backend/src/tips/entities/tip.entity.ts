@@ -11,6 +11,7 @@ import {
 } from "typeorm";
 import { Artist } from "../../artists/entities/artist.entity";
 import { Track } from "../../tracks/entities/track.entity";
+import { TipGoal } from "../../goals/entities/tip-goal.entity";
 
 export enum TipStatus {
   PENDING = "pending",
@@ -38,6 +39,9 @@ export class Tip {
 
   @Column({ length: 255, nullable: true })
   trackId?: string;
+
+  @Column({ length: 255, nullable: true })
+  goalId?: string;
 
   @Column({ length: 64, unique: true })
   stellarTxHash: string;
@@ -126,4 +130,8 @@ export class Tip {
   @ManyToOne(() => Track, (track) => track.tips, { onDelete: "SET NULL" })
   @JoinColumn({ name: "trackId" })
   track?: Track;
+
+  @ManyToOne(() => TipGoal, (goal) => goal.tips, { onDelete: "SET NULL" })
+  @JoinColumn({ name: "goalId" })
+  goal?: TipGoal;
 }

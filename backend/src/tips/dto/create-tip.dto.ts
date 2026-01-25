@@ -1,28 +1,37 @@
-import { IsString, IsUUID, IsOptional, IsBoolean, IsNumber, MaxLength, Min, IsEnum } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TipType } from '../entities/tip.entity';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  MaxLength,
+  Min,
+  IsEnum,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { TipType } from "../entities/tip.entity";
 
 export { TipType };
 
 export class CreateTipDto {
   @ApiProperty({
-    description: 'Artist ID to receive the tip',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: "Artist ID to receive the tip",
+    example: "123e4567-e89b-12d3-a456-426614174000",
   })
   @IsUUID()
   artistId: string;
 
   @ApiPropertyOptional({
-    description: 'Track ID (optional - tips can be for artist only)',
-    example: '456e7890-e89b-12d3-a456-426614174111',
+    description: "Track ID (optional - tips can be for artist only)",
+    example: "456e7890-e89b-12d3-a456-426614174111",
   })
   @IsOptional()
   @IsUUID()
   trackId?: string;
 
   @ApiProperty({
-    description: 'Stellar transaction hash',
-    example: 'c6e0b3e5c8a4f2d1b9a7e6f3c5d8a2b1c4e7f0a9b3d6e9f2c5a8b1e4f7a0c3d6',
+    description: "Stellar transaction hash",
+    example: "c6e0b3e5c8a4f2d1b9a7e6f3c5d8a2b1c4e7f0a9b3d6e9f2c5a8b1e4f7a0c3d6",
     maxLength: 64,
   })
   @IsString()
@@ -30,8 +39,8 @@ export class CreateTipDto {
   stellarTxHash: string;
 
   @ApiPropertyOptional({
-    description: 'Optional message from sender',
-    example: 'Love your music! Keep up the great work!',
+    description: "Optional message from sender",
+    example: "Love your music! Keep up the great work!",
     maxLength: 500,
   })
   @IsOptional()
@@ -40,7 +49,7 @@ export class CreateTipDto {
   message?: string;
 
   @ApiPropertyOptional({
-    description: 'Whether the tip should be anonymous',
+    description: "Whether the tip should be anonymous",
     example: false,
     default: false,
   })
@@ -49,7 +58,7 @@ export class CreateTipDto {
   isAnonymous?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Whether the tip should be public',
+    description: "Whether the tip should be public",
     example: true,
     default: true,
   })
@@ -58,7 +67,7 @@ export class CreateTipDto {
   isPublic?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Tip type',
+    description: "Tip type",
     enum: TipType,
     example: TipType.TRACK,
     default: TipType.ARTIST,
@@ -68,7 +77,7 @@ export class CreateTipDto {
   type?: TipType;
 
   @ApiPropertyOptional({
-    description: 'Exchange rate for fiat conversion',
+    description: "Exchange rate for fiat conversion",
     example: 0.089,
     minimum: 0,
   })
@@ -78,8 +87,8 @@ export class CreateTipDto {
   exchangeRate?: number;
 
   @ApiPropertyOptional({
-    description: 'Fiat currency code',
-    example: 'USD',
+    description: "Fiat currency code",
+    example: "USD",
     maxLength: 10,
   })
   @IsOptional()
@@ -88,7 +97,7 @@ export class CreateTipDto {
   fiatCurrency?: string;
 
   @ApiPropertyOptional({
-    description: 'Additional metadata as JSON string',
+    description: "Additional metadata as JSON string",
     example: '{"source": "mobile_app", "campaign": "summer2023"}',
   })
   @IsOptional()
@@ -98,8 +107,8 @@ export class CreateTipDto {
 
 export class TipVerificationDto {
   @ApiProperty({
-    description: 'Stellar transaction hash to verify',
-    example: 'c6e0b3e5c8a4f2d1b9a7e6f3c5d8a2b1c4e7f0a9b3d6e9f2c5a8b1e4f7a0c3d6',
+    description: "Stellar transaction hash to verify",
+    example: "c6e0b3e5c8a4f2d1b9a7e6f3c5d8a2b1c4e7f0a9b3d6e9f2c5a8b1e4f7a0c3d6",
   })
   @IsString()
   @MaxLength(64)
@@ -108,92 +117,92 @@ export class TipVerificationDto {
 
 export class TipResponseDto {
   @ApiProperty({
-    description: 'Tip ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: "Tip ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
   })
   id: string;
 
   @ApiProperty({
-    description: 'Artist ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: "Artist ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
   })
   artistId: string;
 
   @ApiPropertyOptional({
-    description: 'Track ID',
-    example: '456e7890-e89b-12d3-a456-426614174111',
+    description: "Track ID",
+    example: "456e7890-e89b-12d3-a456-426614174111",
   })
   trackId?: string;
 
   @ApiProperty({
-    description: 'Stellar transaction hash',
-    example: 'c6e0b3e5c8a4f2d1b9a7e6f3c5d8a2b1c4e7f0a9b3d6e9f2c5a8b1e4f7a0c3d6',
+    description: "Stellar transaction hash",
+    example: "c6e0b3e5c8a4f2d1b9a7e6f3c5d8a2b1c4e7f0a9b3d6e9f2c5a8b1e4f7a0c3d6",
   })
   stellarTxHash: string;
 
   @ApiProperty({
-    description: 'Sender Stellar address',
-    example: 'GD5DJQDQKPJ2R5XGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5Q',
+    description: "Sender Stellar address",
+    example: "GD5DJQDQKPJ2R5XGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5Q",
   })
   senderAddress: string;
 
   @ApiProperty({
-    description: 'Receiver Stellar address',
-    example: 'GB5XVAABE5R7D5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5Q',
+    description: "Receiver Stellar address",
+    example: "GB5XVAABE5R7D5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5QGQZ5Q",
   })
   receiverAddress: string;
 
   @ApiProperty({
-    description: 'Tip amount in XLM',
+    description: "Tip amount in XLM",
     example: 10.5,
   })
   amount: number;
 
   @ApiProperty({
-    description: 'Asset type',
-    example: 'XLM',
+    description: "Asset type",
+    example: "XLM",
   })
   asset: string;
 
   @ApiPropertyOptional({
-    description: 'Message from sender',
-    example: 'Love your music!',
+    description: "Message from sender",
+    example: "Love your music!",
   })
   message?: string;
 
   @ApiProperty({
-    description: 'Tip status',
-    enum: ['pending', 'verified', 'failed', 'reversed'],
-    example: 'verified',
+    description: "Tip status",
+    enum: ["pending", "verified", "failed", "reversed"],
+    example: "verified",
   })
   status: string;
 
   @ApiProperty({
-    description: 'Tip type',
+    description: "Tip type",
     enum: TipType,
     example: TipType.TRACK,
   })
   type: TipType;
 
   @ApiPropertyOptional({
-    description: 'Verification timestamp',
-    example: '2023-01-01T12:00:00Z',
+    description: "Verification timestamp",
+    example: "2023-01-01T12:00:00Z",
   })
   verifiedAt?: Date;
 
   @ApiProperty({
-    description: 'Creation timestamp',
-    example: '2023-01-01T12:00:00Z',
+    description: "Creation timestamp",
+    example: "2023-01-01T12:00:00Z",
   })
   createdAt: Date;
 
   @ApiPropertyOptional({
-    description: 'Artist information',
+    description: "Artist information",
   })
   artist?: any;
 
   @ApiPropertyOptional({
-    description: 'Track information',
+    description: "Track information",
   })
   track?: any;
 }

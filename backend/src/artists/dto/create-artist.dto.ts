@@ -4,7 +4,7 @@ import {
   IsOptional,
   IsBoolean,
   Matches,
-} from 'class-validator';
+} from "class-validator";
 
 export class CreateArtistDto {
   @IsString()
@@ -29,7 +29,7 @@ export class CreateArtistDto {
 
   @IsString()
   @Matches(/^G[A-Z0-9]{55}$/, {
-    message: 'Invalid Stellar public key',
+    message: "Invalid Stellar public key",
   })
   walletAddress: string;
 

@@ -7,40 +7,40 @@ import {
   JoinColumn,
   Unique,
   Index,
-} from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+} from "typeorm";
+import { User } from "../../users/entities/user.entity";
 
 export enum FollowingType {
-  ARTIST = 'artist',
-  USER = 'user',
+  ARTIST = "artist",
+  USER = "user",
 }
 
-@Entity('follows')
-@Unique(['followerId', 'followingId', 'followingType'])
-@Index(['followerId', 'followingType'])
-@Index(['followingId', 'followingType'])
-@Index(['createdAt'])
+@Entity("follows")
+@Unique(["followerId", "followingId", "followingType"])
+@Index(["followerId", "followingType"])
+@Index(["followingId", "followingType"])
+@Index(["createdAt"])
 export class Follow {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   followerId: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'followerId' })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "followerId" })
   follower: User;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   followingId: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: FollowingType,
   })
   followingType: FollowingType;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: "boolean", default: true })
   notificationsEnabled: boolean;
 
   @CreateDateColumn()

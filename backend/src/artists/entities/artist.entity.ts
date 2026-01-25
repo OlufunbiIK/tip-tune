@@ -11,6 +11,7 @@ import {
 import { User } from "../../users/entities/user.entity";
 import { Track } from "@/tracks/entities/track.entity";
 import { Tip } from "@/tips/tips.entity";
+import { TipGoal } from "../../goals/entities/tip-goal.entity";
 
 @Entity("artists")
 export class Artist {
@@ -41,6 +42,9 @@ export class Artist {
 
   @OneToMany(() => Tip, (tip) => tip.toArtist)
   tips: Tip[];
+
+  @OneToMany(() => TipGoal, (goal) => goal.artist)
+  goals: TipGoal[];
 
   @Column({ nullable: true })
   coverImage: string;

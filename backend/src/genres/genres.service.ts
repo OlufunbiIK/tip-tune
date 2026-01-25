@@ -4,15 +4,15 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Genre } from './entities/genre.entity';
-import { TrackGenre } from './entities/track-genre.entity';
-import { CreateGenreDto } from './dto/create-genre.dto';
-import { UpdateGenreDto } from './dto/update-genre.dto';
-import { QueryGenreDto } from './dto/query-genre.dto';
-import { Track } from '../tracks/entities/track.entity';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Genre } from "./entities/genre.entity";
+import { TrackGenre } from "./entities/track-genre.entity";
+import { CreateGenreDto } from "./dto/create-genre.dto";
+import { UpdateGenreDto } from "./dto/update-genre.dto";
+import { QueryGenreDto } from "./dto/query-genre.dto";
+import { Track } from "../tracks/entities/track.entity";
 
 @Injectable()
 export class GenresService {
@@ -34,9 +34,9 @@ export class GenresService {
     return name
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 
   /**
@@ -61,7 +61,9 @@ export class GenresService {
       });
 
       if (!parent) {
-        throw new NotFoundException(`Parent genre with ID ${parentGenreId} not found`);
+        throw new NotFoundException(
+          `Parent genre with ID ${parentGenreId} not found`,
+        );
       }
 
       // Prevent circular reference (check if parent is a child of this genre)
@@ -103,24 +105,21 @@ export class GenresService {
     const { page = 1, limit = 10, search, parentId, rootOnly } = queryDto;
     const skip = (page - 1) * limit;
 
-    const queryBuilder = this.genreRepository.createQueryBuilder('genre');
+    const queryBuilder = this.genreRepository.createQueryBuilder("genre");
 
     if (search) {
-      queryBuilder.where('genre.name ILIKE :search', { search: `%${search}%` });
+      queryBuilder.where("genre.name ILIKE :search", { search: `%${search}%` });
     } else {
-      queryBuilder.where('1=1'); // Always true condition to allow andWhere
+      queryBuilder.where("1=1"); // Always true condition to allow andWhere
     }
 
     if (parentId) {
-      queryBuilder.andWhere('genre.parentGenreId = :parentId', { parentId });
+      queryBuilder.andWhere("genre.parentGenreId = :parentId", { parentId });
     } else if (rootOnly) {
-      queryBuilder.andWhere('genre.parentGenreId IS NULL');
+      queryBuilder.andWhere("genre.parentGenreId IS NULL");
     }
 
-    queryBuilder
-      .orderBy('genre.name', 'ASC')
-      .skip(skip)
-      .take(limit);
+    queryBuilder.orderBy("genre.name", "ASC").skip(skip).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -142,13 +141,13 @@ export class GenresService {
   }> {
     const rootGenres = await this.genreRepository.find({
       where: { parentGenreId: null },
-      relations: ['children'],
-      order: { name: 'ASC' },
+      relations: ["children"],
+      order: { name: "ASC" },
     });
 
     const allGenres = await this.genreRepository.find({
-      relations: ['parent', 'children'],
-      order: { trackCount: 'DESC', name: 'ASC' },
+      relations: ["parent", "children"],
+      order: { trackCount: "DESC", name: "ASC" },
     });
 
     return {
@@ -162,9 +161,9 @@ export class GenresService {
    */
   async getPopular(limit: number = 10): Promise<Genre[]> {
     return this.genreRepository.find({
-      order: { trackCount: 'DESC', name: 'ASC' },
+      order: { trackCount: "DESC", name: "ASC" },
       take: limit,
-      relations: ['parent'],
+      relations: ["parent"],
     });
   }
 
@@ -174,7 +173,7 @@ export class GenresService {
   async findOne(id: string): Promise<Genre> {
     const genre = await this.genreRepository.findOne({
       where: { id },
-      relations: ['parent', 'children', 'trackGenres'],
+      relations: ["parent", "children", "trackGenres"],
     });
 
     if (!genre) {
@@ -190,7 +189,7 @@ export class GenresService {
   async findBySlug(slug: string): Promise<Genre> {
     const genre = await this.genreRepository.findOne({
       where: { slug },
-      relations: ['parent', 'children', 'trackGenres'],
+      relations: ["parent", "children", "trackGenres"],
     });
 
     if (!genre) {
@@ -207,7 +206,7 @@ export class GenresService {
     const genre = await this.findOne(genreId);
     return this.genreRepository.find({
       where: { parentGenreId: genreId },
-      order: { name: 'ASC' },
+      order: { name: "ASC" },
     });
   }
 
@@ -221,7 +220,7 @@ export class GenresService {
     while (currentGenre.parentGenreId) {
       const parent = await this.genreRepository.findOne({
         where: { id: currentGenre.parentGenreId },
-        relations: ['parent'],
+        relations: ["parent"],
       });
 
       if (!parent) {
@@ -248,7 +247,9 @@ export class GenresService {
       });
 
       if (existing && existing.id !== id) {
-        throw new ConflictException(`Genre with name "${updateGenreDto.name}" already exists`);
+        throw new ConflictException(
+          `Genre with name "${updateGenreDto.name}" already exists`,
+        );
       }
 
       genre.name = updateGenreDto.name;
@@ -258,7 +259,7 @@ export class GenresService {
     // Validate parent if being updated
     if (updateGenreDto.parentGenreId !== undefined) {
       if (updateGenreDto.parentGenreId === id) {
-        throw new BadRequestException('Genre cannot be its own parent');
+        throw new BadRequestException("Genre cannot be its own parent");
       }
 
       if (updateGenreDto.parentGenreId) {
@@ -267,13 +268,17 @@ export class GenresService {
         });
 
         if (!parent) {
-          throw new NotFoundException(`Parent genre with ID ${updateGenreDto.parentGenreId} not found`);
+          throw new NotFoundException(
+            `Parent genre with ID ${updateGenreDto.parentGenreId} not found`,
+          );
         }
 
         // Prevent circular reference - check if new parent is a descendant
         const descendants = await this.getAllDescendants(id);
         if (descendants.some((d) => d.id === updateGenreDto.parentGenreId)) {
-          throw new BadRequestException('Cannot set parent to a descendant genre');
+          throw new BadRequestException(
+            "Cannot set parent to a descendant genre",
+          );
         }
       }
 
@@ -336,7 +341,10 @@ export class GenresService {
   /**
    * Assign genres to a track
    */
-  async assignGenresToTrack(trackId: string, genreIds: string[]): Promise<TrackGenre[]> {
+  async assignGenresToTrack(
+    trackId: string,
+    genreIds: string[],
+  ): Promise<TrackGenre[]> {
     // Verify track exists
     const track = await this.trackRepository.findOne({
       where: { id: trackId },
@@ -354,7 +362,7 @@ export class GenresService {
     if (genres.length !== genreIds.length) {
       const foundIds = genres.map((g) => g.id);
       const missingIds = genreIds.filter((id) => !foundIds.includes(id));
-      throw new NotFoundException(`Genres not found: ${missingIds.join(', ')}`);
+      throw new NotFoundException(`Genres not found: ${missingIds.join(", ")}`);
     }
 
     // Remove existing assignments
@@ -385,7 +393,7 @@ export class GenresService {
     });
 
     if (!trackGenre) {
-      throw new NotFoundException('Genre assignment not found');
+      throw new NotFoundException("Genre assignment not found");
     }
 
     await this.trackGenreRepository.remove(trackGenre);
@@ -400,7 +408,7 @@ export class GenresService {
   async getTrackGenres(trackId: string): Promise<Genre[]> {
     const trackGenres = await this.trackGenreRepository.find({
       where: { trackId },
-      relations: ['genre', 'genre.parent'],
+      relations: ["genre", "genre.parent"],
     });
 
     return trackGenres.map((tg) => tg.genre);
@@ -436,6 +444,6 @@ export class GenresService {
       await this.updateTrackCount(genre.id);
     }
 
-    this.logger.log('Recalculated track counts for all genres');
+    this.logger.log("Recalculated track counts for all genres");
   }
 }

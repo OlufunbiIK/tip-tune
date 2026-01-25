@@ -1,16 +1,21 @@
-import { IsOptional, IsInt, Min, Max, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsInt, Min, Max, IsBoolean } from "class-validator";
+import { Type } from "class-transformer";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class PlaylistPaginationDto {
-  @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })
+  @ApiPropertyOptional({ description: "Page number", default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', default: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    description: "Items per page",
+    default: 10,
+    minimum: 1,
+    maximum: 100,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -18,7 +23,7 @@ export class PlaylistPaginationDto {
   @Max(100)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ description: 'Filter by public status' })
+  @ApiPropertyOptional({ description: "Filter by public status" })
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
@@ -26,10 +31,10 @@ export class PlaylistPaginationDto {
 }
 
 export class PaginatedPlaylistResponse<T> {
-  @ApiPropertyOptional({ description: 'Array of items' })
+  @ApiPropertyOptional({ description: "Array of items" })
   data: T[];
 
-  @ApiPropertyOptional({ description: 'Pagination metadata' })
+  @ApiPropertyOptional({ description: "Pagination metadata" })
   meta: {
     total: number;
     page: number;

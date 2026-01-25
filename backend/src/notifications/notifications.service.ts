@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NotificationsGateway } from './notifications.gateway';
-import { Notification, NotificationType } from './notification.entity';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { NotificationsGateway } from "./notifications.gateway";
+import { Notification, NotificationType } from "./notification.entity";
 
 @Injectable()
 export class NotificationsService {
@@ -13,7 +13,7 @@ export class NotificationsService {
   ) {}
 
   async notifyArtistOfTip(artistId: string, tip: any) {
-    const title = 'New Tip Received!';
+    const title = "New Tip Received!";
     const message = `You received a tip of ${tip.amount} XLM!`;
     const data = {
       tipId: tip.id,
@@ -30,23 +30,29 @@ export class NotificationsService {
       message,
       data,
     });
-    
-    const savedNotification = await this.notificationRepository.save(notification);
+
+    const savedNotification =
+      await this.notificationRepository.save(notification);
 
     // Emit via WebSocket
     this.notificationsGateway.sendNotificationToArtist(artistId, {
       ...savedNotification,
-      type: 'TIP_RECEIVED', // Ensure frontend gets the string it expects if consistent with enum
+      type: "TIP_RECEIVED", // Ensure frontend gets the string it expects if consistent with enum
     });
   }
 
-  async getUserNotifications(userId: string, page: number = 1, limit: number = 20) {
-    const [notifications, total] = await this.notificationRepository.findAndCount({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+  async getUserNotifications(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const [notifications, total] =
+      await this.notificationRepository.findAndCount({
+        where: { userId },
+        order: { createdAt: "DESC" },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
 
     return {
       data: notifications,
@@ -72,7 +78,7 @@ export class NotificationsService {
     });
 
     if (!notification) {
-      throw new NotFoundException('Notification not found');
+      throw new NotFoundException("Notification not found");
     }
 
     notification.isRead = true;

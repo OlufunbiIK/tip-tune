@@ -1,25 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from '../users/entities/user.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+import { User } from "../users/entities/user.entity";
 
 export enum NotificationType {
-  TIP_RECEIVED = 'TIP_RECEIVED',
-  SYSTEM = 'SYSTEM',
+  TIP_RECEIVED = "TIP_RECEIVED",
+  SYSTEM = "SYSTEM",
 }
 
-@Entity('notifications')
+@Entity("notifications")
 export class Notification {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   userId: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "userId" })
   user: User;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: NotificationType,
     default: NotificationType.SYSTEM,
   })
@@ -31,7 +38,7 @@ export class Notification {
   @Column()
   message: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   data: any;
 
   @Column({ default: false })

@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, ConflictException, Logger, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Logger,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { User } from "./entities/user.entity";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 @Injectable()
 export class UsersService {
@@ -21,7 +27,9 @@ export class UsersService {
         where: { username: createUserDto.username },
       });
       if (existingUsername) {
-        throw new ConflictException(`Username '${createUserDto.username}' is already taken`);
+        throw new ConflictException(
+          `Username '${createUserDto.username}' is already taken`,
+        );
       }
 
       // Check if email already exists
@@ -29,7 +37,9 @@ export class UsersService {
         where: { email: createUserDto.email },
       });
       if (existingEmail) {
-        throw new ConflictException(`Email '${createUserDto.email}' is already registered`);
+        throw new ConflictException(
+          `Email '${createUserDto.email}' is already registered`,
+        );
       }
 
       // Check if wallet address already exists
@@ -37,7 +47,9 @@ export class UsersService {
         where: { walletAddress: createUserDto.walletAddress },
       });
       if (existingWallet) {
-        throw new ConflictException(`Wallet address '${createUserDto.walletAddress}' is already registered`);
+        throw new ConflictException(
+          `Wallet address '${createUserDto.walletAddress}' is already registered`,
+        );
       }
 
       const user = this.usersRepository.create({
@@ -47,7 +59,7 @@ export class UsersService {
 
       const savedUser = await this.usersRepository.save(user);
       this.logger.log(`User created successfully: ${savedUser.id}`);
-      
+
       return savedUser;
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -60,64 +72,68 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return this.usersRepository.find({
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
     });
   }
 
   async findOne(id: string): Promise<User> {
     if (!id || !this.isValidUUID(id)) {
-      throw new BadRequestException('Invalid user ID format');
+      throw new BadRequestException("Invalid user ID format");
     }
 
     const user = await this.usersRepository.findOne({ where: { id } });
-    
+
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    
+
     return user;
   }
 
   async findByUsername(username: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { username } });
-    
+
     if (!user) {
       throw new NotFoundException(`User with username '${username}' not found`);
     }
-    
+
     return user;
   }
 
   async findByEmail(email: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { email } });
-    
+
     if (!user) {
       throw new NotFoundException(`User with email '${email}' not found`);
     }
-    
+
     return user;
   }
 
   async findByWalletAddress(walletAddress: string): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { walletAddress } });
-    
+    const user = await this.usersRepository.findOne({
+      where: { walletAddress },
+    });
+
     if (!user) {
-      throw new NotFoundException(`User with wallet address '${walletAddress}' not found`);
+      throw new NotFoundException(
+        `User with wallet address '${walletAddress}' not found`,
+      );
     }
-    
+
     return user;
   }
 
   async findArtists(): Promise<User[]> {
     return this.usersRepository.find({
       where: { isArtist: true },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
     });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-    
+
     try {
       // Check for unique constraint violations
       if (updateUserDto.username && updateUserDto.username !== user.username) {
@@ -125,7 +141,9 @@ export class UsersService {
           where: { username: updateUserDto.username },
         });
         if (existingUsername) {
-          throw new ConflictException(`Username '${updateUserDto.username}' is already taken`);
+          throw new ConflictException(
+            `Username '${updateUserDto.username}' is already taken`,
+          );
         }
       }
 
@@ -134,27 +152,37 @@ export class UsersService {
           where: { email: updateUserDto.email },
         });
         if (existingEmail) {
-          throw new ConflictException(`Email '${updateUserDto.email}' is already registered`);
+          throw new ConflictException(
+            `Email '${updateUserDto.email}' is already registered`,
+          );
         }
       }
 
-      if (updateUserDto.walletAddress && updateUserDto.walletAddress !== user.walletAddress) {
+      if (
+        updateUserDto.walletAddress &&
+        updateUserDto.walletAddress !== user.walletAddress
+      ) {
         const existingWallet = await this.usersRepository.findOne({
           where: { walletAddress: updateUserDto.walletAddress },
         });
         if (existingWallet) {
-          throw new ConflictException(`Wallet address '${updateUserDto.walletAddress}' is already registered`);
+          throw new ConflictException(
+            `Wallet address '${updateUserDto.walletAddress}' is already registered`,
+          );
         }
       }
 
       Object.assign(user, updateUserDto);
-      
+
       const updatedUser = await this.usersRepository.save(user);
       this.logger.log(`User updated successfully: ${id}`);
-      
+
       return updatedUser;
     } catch (error) {
-      if (error instanceof ConflictException || error instanceof NotFoundException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
       this.logger.error(`Failed to update user: ${error.message}`);
@@ -164,7 +192,7 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
-    
+
     try {
       await this.usersRepository.remove(user);
       this.logger.log(`User deleted successfully: ${id}`);
@@ -175,8 +203,8 @@ export class UsersService {
   }
 
   private isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   }
 }
-
