@@ -9,7 +9,8 @@ import {
   OneToMany,
 } from "typeorm";
 import { Artist } from "../../artists/entities/artist.entity";
-import { GoalSupporter } from "./goal-supporter.entity";
+import { GoalSupporter } from "@/goals/entities/goal-supporter.entity";
+
 import { Tip } from "../../tips/entities/tip.entity";
 
 export enum GoalStatus {

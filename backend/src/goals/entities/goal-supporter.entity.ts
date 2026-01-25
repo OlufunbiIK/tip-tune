@@ -6,7 +6,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from "typeorm";
-import { TipGoal } from "./tip-goal.entity";
+import { TipGoal } from "@/goals/entities/tip-goal.entity";
+
 import { User } from "../../users/entities/user.entity";
 
 @Entity("goal_supporters")
