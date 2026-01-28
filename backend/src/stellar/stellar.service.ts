@@ -74,26 +74,41 @@ export class StellarService {
     }
   }
 
-  async getConversionRate(fromAssetCode: string, toAssetCode: string, amount: number) {
-     try {
-       const fromAsset = fromAssetCode === 'XLM' ? StellarSdk.Asset.native() : new StellarSdk.Asset(fromAssetCode, 'TODO_ISSUER_LOOKUP'); // Needs issuer lookup in real implementation
-       const toAsset = toAssetCode === 'XLM' ? StellarSdk.Asset.native() : new StellarSdk.Asset(toAssetCode, 'TODO_ISSUER_LOOKUP');
+  async getConversionRate(
+    fromAssetCode: string,
+    fromAssetIssuer: string | null,
+    toAssetCode: string,
+    toAssetIssuer: string | null,
+    amount: number
+  ) {
+    try {
+      const fromAsset =
+        fromAssetCode === 'XLM'
+          ? StellarSdk.Asset.native()
+          : new StellarSdk.Asset(fromAssetCode, fromAssetIssuer!);
 
-       // Use strict send path to find how much destination asset we get for source amount
-       const paths = await this.server.strictSendPaths(fromAsset, amount.toString(), [toAsset]).call();
-       
-       if (paths.records && paths.records.length > 0) {
-         // Return the best path's destination amount
-         return {
-           rate: parseFloat(paths.records[0].destination_amount) / amount,
-           estimatedAmount: paths.records[0].destination_amount
-         };
-       }
-       return { rate: 0, estimatedAmount: 0 };
-     } catch (error) {
-       this.logger.error(`Error fetching conversion rate: ${error.message}`);
-       return { rate: 0, estimatedAmount: 0 };
-     }
+      const toAsset =
+        toAssetCode === 'XLM'
+          ? StellarSdk.Asset.native()
+          : new StellarSdk.Asset(toAssetCode, toAssetIssuer!);
+
+      // Use strict send path to find how much destination asset we get for source amount
+      const paths = await this.server
+        .strictSendPaths(fromAsset, amount.toString(), [toAsset])
+        .call();
+
+      if (paths.records && paths.records.length > 0) {
+        // Return the best path's destination amount
+        return {
+          rate: parseFloat(paths.records[0].destination_amount) / amount,
+          estimatedAmount: paths.records[0].destination_amount,
+        };
+      }
+      return { rate: 0, estimatedAmount: 0 };
+    } catch (error) {
+      this.logger.error(`Error fetching conversion rate: ${error.message}`);
+      return { rate: 0, estimatedAmount: 0 };
+    }
   }
 
   async getTransactionDetails(txHash: string) {

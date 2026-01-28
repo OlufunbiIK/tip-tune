@@ -12,13 +12,13 @@ export class AssetsService {
     private stellarService: StellarService,
   ) {}
 
-  async findAllSupported() {
+  async findAllSupported(): Promise<SupportedAsset[]> {
     return this.assetsRepository.find({
       where: { isEnabled: true },
     });
   }
 
-  async findByArtist(artistId: string) {
+  async findByArtist(artistId: string): Promise<SupportedAsset[]> {
     return this.assetsRepository.find({
       where: [
         { isGlobal: true, isEnabled: true },
@@ -28,7 +28,27 @@ export class AssetsService {
   }
 
   async getConversionRate(fromAsset: string, toAsset: string, amount: number) {
-    // This would typically involve checking path payments on Stellar
-    return this.stellarService.getConversionRate(fromAsset, toAsset, amount);
+    // Helper to find issuer
+    const getIssuer = async (code: string) => {
+      if (code === 'XLM') return null;
+      const asset = await this.assetsRepository.findOne({
+        where: { assetCode: code, isEnabled: true },
+      });
+      if (!asset) {
+        throw new NotFoundException(`Asset ${code} not supported`);
+      }
+      return asset.assetIssuer;
+    };
+
+    const fromIssuer = await getIssuer(fromAsset);
+    const toIssuer = await getIssuer(toAsset);
+
+    return this.stellarService.getConversionRate(
+      fromAsset,
+      fromIssuer,
+      toAsset,
+      toIssuer,
+      amount,
+    );
   }
 }
