@@ -26,7 +26,7 @@ export interface Track {
   plays: number;
   artistId?: string;
   tips: number;
-  artist?: ArtistSummary;
+  artist: ArtistSummary;
   filename?: string;
   url?: string;
   streamingUrl?: string;
@@ -121,7 +121,7 @@ export interface UserBadge {
 
 export interface ArtistSummary {
   id: string;
-  artistName?: string;
+  artistName: string;
 }
 
 export interface PlaylistTrack {

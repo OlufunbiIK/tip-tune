@@ -27,8 +27,12 @@ const HomePage = () => {
           Real-time music tips powered by Stellar
         </p>
       </div>
+
     </div>
   );
 };
 
+
 export default HomePage;
+
+
