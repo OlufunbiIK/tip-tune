@@ -1,125 +1,113 @@
 import React, { useState, useCallback } from 'react';
-import { useSpring, animated, useTrail } from 'react-spring';
+import { animated, useSpring, useTrail } from 'react-spring';
 import { useReducedMotion, getSpringConfig } from '../../utils/animationUtils';
+import { useHaptic } from '../../hooks';
 import AssetToggle from './AssetToggle';
 
+const PRESETS = [1, 5, 10, 25, 50];
+
 export interface AmountSelectorProps {
-    presets?: number[];
-    currency?: 'XLM' | 'USDC';
-    xlmUsdRate?: number;
     value: number;
-    onChange: (amount: number) => void;
+    currency: 'XLM' | 'USDC';
+    onAmountChange: (amount: number) => void;
     onCurrencyToggle?: (currency: 'XLM' | 'USDC') => void;
-    showCustomInput?: boolean;
-    showSlider?: boolean;
-    walletBalance?: {
-        xlm: number;
-        usdc: number;
-    };
+    walletBalance?: { xlm: number; usdc: number };
+    xlmUsdRate?: number;
 }
 
-const DEFAULT_PRESETS = [1, 5, 10, 25, 50];
-const MAX_SLIDER_VALUE = 100; // Maximum value for slider
-
 const AmountSelector: React.FC<AmountSelectorProps> = ({
-    presets = DEFAULT_PRESETS,
-    currency = 'XLM',
-    xlmUsdRate = 0.11,
     value,
-    onChange,
+    currency,
+    onAmountChange,
     onCurrencyToggle,
-    showCustomInput = true,
-    showSlider = true,
-    walletBalance = { xlm: 1000, usdc: 100 },
+    walletBalance = { xlm: 1000, usdc: 5000 },
+    xlmUsdRate = 0.12,
 }) => {
     const reducedMotion = useReducedMotion();
-    const [activePreset, setActivePreset] = useState<number | null>(value);
+    const haptic = useHaptic();
+    const presets = PRESETS;
+    const [activePreset, setActivePreset] = useState(5);
     const [customValue, setCustomValue] = useState('');
-    const [isDraggingSlider, setIsDraggingSlider] = useState(false);
-    const [inputFocused, setInputFocused] = useState(false);
-    const [currencyFlipKey, setCurrencyFlipKey] = useState(0);
+    const [showCustomInput, setShowCustomInput] = useState(false);
     const [pressedId, setPressedId] = useState<number | null>(null);
+    const [showSlider, setShowSlider] = useState(false);
+    const [isDraggingSlider, setIsDraggingSlider] = useState(false);
 
-    // Staggered preset trail
+    const maxAmount = currency === 'XLM' ? walletBalance.xlm : walletBalance.usdc;
+
+    const springConfig = getSpringConfig(reducedMotion ? undefined : 'gentle');
+    const presetSpringConfig = getSpringConfig(reducedMotion ? undefined : 'wobbly');
+
     const trail = useTrail(presets.length, {
-        from: { opacity: 0, y: 10, scale: 0.9 },
-        to: { opacity: 1, y: 0, scale: 1 },
-        config: getSpringConfig('gentle'),
-        immediate: reducedMotion,
+        from: { opacity: 0, scale: 0.8 },
+        to: { opacity: 1, scale: 1 },
+        config: presetSpringConfig,
     });
 
-    // Input focus spring
     const inputSpring = useSpring({
-        scale: inputFocused ? 1.02 : 1,
-        boxShadow: inputFocused
-            ? '0 0 0 2px rgba(77,163,255,0.5)'
-            : '0 0 0 1px rgba(77,163,255,0.15)',
-        config: getSpringConfig('stiff'),
-        immediate: reducedMotion,
+        opacity: showCustomInput ? 1 : 0,
+        height: showCustomInput ? 48 : 0,
+        config: springConfig,
     });
 
-    const handleSliderChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newAmount = parseFloat(e.target.value);
-            setActivePreset(null);
-            setCustomValue('');
-            onChange(newAmount);
-        },
-        [onChange]
-    );
+    const handlePresetClick = useCallback((preset: number, idx: number) => {
+        haptic?.trigger('light');
+        setActivePreset(preset);
+        setPressedId(idx);
+        setCustomValue('');
+        setShowCustomInput(false);
+        setShowSlider(false);
+        onAmountChange(preset);
+        setTimeout(() => setPressedId(null), 150);
+    }, [onAmountChange, haptic]);
+
+    const handleCustomChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setCustomValue(val);
+        const numVal = parseFloat(val) || 0;
+        if (numVal > 0 && numVal <= maxAmount) {
+            onAmountChange(numVal);
+            setActivePreset(-1);
+            haptic?.trigger('light');
+        }
+    }, [onAmountChange, maxAmount, haptic]);
+
+    const handleSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = parseFloat(e.currentTarget.value);
+        onAmountChange(val);
+        setActivePreset(-1);
+    }, [onAmountChange]);
 
     const handleSliderDragStart = useCallback(() => {
         setIsDraggingSlider(true);
-    }, []);
+        haptic?.trigger('medium');
+    }, [haptic]);
 
     const handleSliderDragEnd = useCallback(() => {
         setIsDraggingSlider(false);
-    }, []);
+        haptic?.trigger('light');
+    }, [haptic]);
 
-    const handlePresetClick = useCallback((preset: number, idx: number) => {
-        setActivePreset(preset);
-        setCustomValue('');
-        onChange(preset);
-
-        // Bounce press
-        if (!reducedMotion) {
-            setPressedId(idx);
-            setTimeout(() => setPressedId(null), 300);
-        }
-    }, [onChange, reducedMotion]);
-
-    const handleCustomChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const raw = e.target.value;
-        setCustomValue(raw);
-        setActivePreset(null);
-        const parsed = parseFloat(raw);
-        if (!isNaN(parsed) && parsed > 0) onChange(parsed);
-    }, [onChange]);
-maxAmount = currency === 'XLM' ? walletBalance.xlm : walletBalance.usdc;
-
-    const 
     const handleCurrencyToggle = useCallback(() => {
-        setCurrencyFlipKey(k => k + 1);
+        haptic?.trigger('selection');
         const next = currency === 'XLM' ? 'USDC' : 'XLM';
         onCurrencyToggle?.(next);
-    }, [currency, onCurrencyToggle]);
+    }, [currency, onCurrencyToggle, haptic]);
 
     const usdEquivalent = currency === 'XLM'
         ? (value * xlmUsdRate).toFixed(2)
         : value.toFixed(2);
-6" role="group" aria-label="Select tip amount">
-            {/* Asset Toggle */}
+
+    return (
+        <div className="space-y-4" role="group" aria-label="Select tip amount">
             <AssetToggle
                 currency={currency}
-                onToggle={onCurrencyToggle || (() => {})}
+                onToggle={handleCurrencyToggle}
                 xlmUsdRate={xlmUsdRate}
                 walletBalance={walletBalance}
                 displayAmount={value}
-            /   </svg>
-                </button>
-            </div>
+            />
 
-            {/* Preset buttons */}
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Preset amounts">
                 {trail.map((style, idx) => {
                     const preset = presets[idx];
@@ -131,7 +119,37 @@ maxAmount = currency === 'XLM' ? walletBalance.xlm : walletBalance.usdc;
                             key={preset}
                             type="button"
                             role="radio"
-                Slider for custom amount */}
+                            aria-checked={isActive}
+                            id={`preset-amount-${preset}`}
+                            onClick={() => handlePresetClick(preset, idx)}
+                            style={{
+                                ...style,
+                                scale: isPressed && !reducedMotion ? 0.88 : isActive && !reducedMotion ? 1.08 : 1,
+                            }}
+                            className={`min-w-[52px] px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-150
+                ${isActive
+                                    ? 'bg-accent-gold text-gray-900 shadow-lg shadow-accent-gold/30'
+                                    : 'bg-navy/40 border border-blue-primary/20 text-gray-300 hover:border-blue-primary/50 hover:text-white'}
+              `}
+                        >
+                            {preset}
+                        </animated.button>
+                    );
+                })}
+            </div>
+
+            <button
+                type="button"
+                onClick={() => {
+                    setShowSlider(!showSlider);
+                    setShowCustomInput(false);
+                    haptic?.trigger('light');
+                }}
+                className="w-full py-2 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            >
+                {showSlider ? '▼' : '▶'} Slider
+            </button>
+
             {showSlider && (
                 <div className="space-y-3">
                     <label htmlFor="amount-slider" className="text-xs text-gray-400 uppercase tracking-wider font-medium block">
@@ -150,20 +168,7 @@ maxAmount = currency === 'XLM' ? walletBalance.xlm : walletBalance.usdc;
                             onMouseUp={handleSliderDragEnd}
                             onTouchStart={handleSliderDragStart}
                             onTouchEnd={handleSliderDragEnd}
-                            className="w-full h-2 rounded-full bg-navy appearance-none cursor-pointer
-                            [background:linear-gradient(to_right,rgba(77,163,255,0.3)_0%,rgba(77,163,255,0.3)_var(--value),rgba(77,163,255,0.1)_var(--value),rgba(77,163,255,0.1)_100%)]
-                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
-                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                            [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-blue-primary [&::-webkit-slider-thumb]:to-ice-blue
-                            [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-blue-primary/50 [&::-webkit-slider-thumb]:border-0
-                            [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-                            [&::-moz-range-thumb]:bg-gradient-to-r [&::-moz-range-thumb]:from-blue-primary [&::-moz-range-thumb]:to-ice-blue
-                            [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg [&::-moz-range-thumb]:shadow-blue-primary/50
-                            hover:[&::-webkit-slider-thumb]:shadow-blue-primary/70 hover:[&::-moz-range-thumb]:shadow-blue-primary/70
-                            transition-all"
-                            style={{
-                                '--value': `${(value / maxAmount) * 100}%`,
-                            } as React.CSSProperties}
+                            className="w-full h-2 rounded-full bg-navy appearance-none cursor-pointer"
                             aria-label="Tip amount slider"
                             aria-valuemin={0}
                             aria-valuemax={maxAmount}
@@ -179,31 +184,20 @@ maxAmount = currency === 'XLM' ? walletBalance.xlm : walletBalance.usdc;
                         <span>{maxAmount.toFixed(2)}</span>
                     </div>
                 </div>
-            )checked={isActive}
-                            id={`preset-amount-${preset}`}
-                            onClick={() => handlePresetClick(preset, idx)}
-                            style={{
-                                ...style,
-                                scale: isPressed && !reducedMotion
-                                    ? 0.88
-                                    : isActive && !reducedMotion
-                                        ? 1.08
-                                        : 1,
-                                transition: 'box-shadow 0.15s',
-                            }}
-                            className={`min-w-[52px] px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-150
-                ${isActive
-                                    ? 'bg-accent-gold text-gray-900 shadow-lg shadow-accent-gold/30'
-                                    : 'bg-navy/40 border border-blue-primary/20 text-gray-300 hover:border-blue-primary/50 hover:text-white'}
-              `}
-                        >
-                            {preset}
-                        </animated.button>
-                    );
-                })}
-            </div>
+            )}
 
-            {/* Custom input */}
+            <button
+                type="button"
+                onClick={() => {
+                    setShowCustomInput(!showCustomInput);
+                    setShowSlider(false);
+                    haptic?.trigger('light');
+                }}
+                className="w-full py-2 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            >
+                {showCustomInput ? '▼' : '▶'} Custom Amount
+            </button>
+
             {showCustomInput && (
                 <animated.div style={reducedMotion ? {} : inputSpring} className="rounded-xl overflow-hidden">
                     <div className="relative flex items-center bg-navy/40 border border-blue-primary/20 rounded-xl">
@@ -215,19 +209,15 @@ maxAmount = currency === 'XLM' ? walletBalance.xlm : walletBalance.usdc;
                             step="0.01"
                             value={customValue}
                             onChange={handleCustomChange}
-                            onFocus={() => setInputFocused(true)}
-                            onBlur={() => setInputFocused(false)}
                             placeholder="0.00"
                             aria-label="Custom tip amount"
-                            className="flex-1 bg-transparent text-right pr-3 py-3 text-white text-sm font-medium outline-none placeholder-gray-600
-                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="flex-1 bg-transparent text-right pr-3 py-3 text-white text-sm font-medium outline-none placeholder-gray-600"
                         />
                         <span className="pr-4 text-gray-400 text-xs font-medium">{currency}</span>
                     </div>
                 </animated.div>
             )}
 
-            {/* USD equivalent */}
             <p className="text-xs text-gray-500 text-right">
                 ≈ <span className="text-gray-300 font-medium">${usdEquivalent} USD</span>
             </p>

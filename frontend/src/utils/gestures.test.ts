@@ -2,8 +2,8 @@
  * Gesture Utilities and Hooks Tests
  */
 
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import {
     createGestureHandler,
     calculateMomentum,
@@ -144,17 +144,15 @@ describe('Gesture Hooks', () => {
 
     describe('useDoubleTap', () => {
         it('initializes without error', () => {
-            const ref = React.createRef<HTMLDivElement>();
             const { result } = renderHook(() =>
-                useDoubleTap(ref, { enabled: false })
+                useDoubleTap({ enabled: false })
             );
             expect(result.current.handleTap).toBeDefined();
         });
 
         it('provides handleTap function', () => {
-            const ref = React.createRef<HTMLDivElement>();
             const { result } = renderHook(() =>
-                useDoubleTap(ref, { enabled: true })
+                useDoubleTap({ enabled: true })
             );
             expect(typeof result.current.handleTap).toBe('function');
         });

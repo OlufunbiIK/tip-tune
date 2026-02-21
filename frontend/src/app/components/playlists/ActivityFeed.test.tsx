@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react';
+import { screen } from '@testing-library/dom';
 import ActivityFeed from './ActivityFeed'
 
 test('renders activity items', () => {

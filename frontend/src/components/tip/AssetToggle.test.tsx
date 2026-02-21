@@ -2,8 +2,8 @@
  * AssetToggle Component Tests
  */
 
-import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { screen } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import AssetToggle from './AssetToggle';

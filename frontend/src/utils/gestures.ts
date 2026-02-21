@@ -34,7 +34,6 @@ class GestureHandler {
     private startPoint: GesturePoint | null = null;
     private lastTapTime: number = 0;
     private config: GestureConfig;
-    private isDoubleTap: boolean = false;
 
     constructor(config: Partial<GestureConfig> = {}) {
         this.config = { ...DEFAULT_CONFIG, ...config };
@@ -88,7 +87,6 @@ class GestureHandler {
 
         if (doubleTapGap < this.config.doubleTapDelay!) {
             this.lastTapTime = 0; // Reset
-            this.isDoubleTap = true;
             return true;
         }
 
@@ -102,7 +100,6 @@ class GestureHandler {
     reset(): void {
         this.startPoint = null;
         this.lastTapTime = 0;
-        this.isDoubleTap = false;
     }
 }
 

@@ -155,7 +155,6 @@ export interface UseDoubleTapOptions {
  * Useful for quick tipping, favoring, etc.
  */
 export function useDoubleTap(
-    elementRef: React.RefObject<HTMLElement>,
     options: UseDoubleTapOptions = {}
 ) {
     const { onDoubleTap, onSingleTap, enabled = true } = options;

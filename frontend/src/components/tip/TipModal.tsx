@@ -6,9 +6,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { animated, useSpring, useTrail } from 'react-spring';
 import { X } from 'lucide-react';
-import { useSwipeGesture, useVirtualKeyboard, useHaptic } from '../hooks';
-import { useReducedMotion, getSpringConfig } from '../utils/animationUtils';
-import { getSafeAreaInsets, setupSafeAreaInsets } from '../utils/gestures';
+import { useSwipeGesture, useVirtualKeyboard, useHaptic } from '../../hooks';
+import { useReducedMotion, getSpringConfig } from '../../utils/animationUtils';
+import { getSafeAreaInsets, setupSafeAreaInsets } from '../../utils/gestures';
 import AmountSelector from './AmountSelector';
 import TipMessage from './TipMessage';
 import TipConfirmation from './TipConfirmation';
@@ -32,7 +32,6 @@ export type TipModalStep = 'amount' | 'message' | 'confirmation' | 'loading' | '
 const TipModal: React.FC<TipModalProps> = ({
     isOpen,
     onClose,
-    artistId,
     artistName,
     artistImage,
     onTipSuccess,
@@ -339,7 +338,7 @@ const StepAmount: React.FC<
                 <AmountSelector
                     value={amount}
                     currency={currency}
-                    onChange={onAmountChange}
+                    onAmountChange={onAmountChange}
                     onCurrencyToggle={onCurrencyToggle}
                     xlmUsdRate={xlmUsdRate}
                     walletBalance={walletBalance}

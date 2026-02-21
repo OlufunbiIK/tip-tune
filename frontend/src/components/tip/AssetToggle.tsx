@@ -39,14 +39,6 @@ const AssetToggle: React.FC<AssetToggleProps> = ({
         immediate: reducedMotion,
     });
 
-    // Animation for text flip
-    const flipSpring = useSpring({
-        opacity: 1,
-        transform: 'rotateY(0deg)',
-        config: getSpringConfig('gentle'),
-        immediate: reducedMotion,
-    });
-
     const balanceXlm = walletBalance.xlm;
     const balanceUsdc = walletBalance.usdc;
     const convertedAmount = currency === 'XLM'
