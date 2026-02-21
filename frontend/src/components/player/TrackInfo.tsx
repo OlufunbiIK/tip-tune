@@ -5,32 +5,34 @@ interface TrackInfoProps {
     id: string;
   };
   albumArt?: string;
- 
 }
 
 const TrackInfo = ({ title, artist, albumArt }: TrackInfoProps) => {
   return (
-    <div className="flex gap-x-3  ">
+    <div className="flex gap-x-3" role="region" aria-label="Now playing">
       <div className="h-[100px] w-[100px] object-cover rounded-2xl overflow-hidden relative shadow-lg border border-white/5">
         {albumArt ? (
           <img
-            src={albumArt }
-            alt="Album Art"
-            className="w-full h-full object-cover rounded-2xl  "
+            src={albumArt}
+            alt={`Album art for ${title} by ${artist.artistName}`}
+            className="w-full h-full object-cover rounded-2xl"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/50">
+          <div
+            className="w-full h-full flex items-center justify-center text-white/50 bg-gray-800"
+            role="img"
+            aria-label="No album art available"
+          >
             <svg
               viewBox="0 0 24 24"
               fill="currentColor"
               className="w-2/5 h-2/5"
+              aria-hidden="true"
             >
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
             </svg>
           </div>
         )}
-
-        
       </div>
 
       <div className="mt-2">

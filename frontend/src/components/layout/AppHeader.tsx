@@ -17,33 +17,42 @@ const AppHeader: React.FC = () => {
   const closeMenu = () => setIsOpen(false);
 
   return (
-    <header className="bg-white sticky top-0 z-30 shadow-sm">
+    <header className="bg-white sticky top-0 z-30 shadow-sm" role="banner">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2" onClick={closeMenu}>
+          <Link
+            to="/"
+            className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 rounded-md"
+            onClick={closeMenu}
+            aria-label="TipTune home"
+          >
             <img
               src="/assets/logo.svg"
-              alt="TipTune"
+              alt=""
               className="h-8 w-auto"
+              aria-hidden="true"
             />
             <span className="text-lg sm:text-xl text-deep-slate font-semibold tracking-tight">
               TipTune
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-4 text-sm sm:text-base">
+          <nav
+            className="hidden md:flex items-center gap-4 text-sm sm:text-base"
+            aria-label="Main navigation"
+          >
             {navItems.map((item) => {
               const isActive = location.pathname === item.to;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`px-3 py-1.5 rounded-md transition-colors ${isActive
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`px-3 py-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 ${
+                    isActive
                       ? 'bg-deep-slate text-white'
                       : 'text-primary-blue hover:text-white hover:bg-primary-blue'
-                    }`}
+                  }`}
                 >
                   {item.label}
                 </Link>
@@ -51,20 +60,28 @@ const AppHeader: React.FC = () => {
             })}
           </nav>
 
-          {/* Mobile menu button */}
           <button
             type="button"
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-deep-slate hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-blue"
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-deep-slate hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2"
             onClick={toggleMenu}
-            aria-label="Toggle navigation"
+            aria-expanded={isOpen}
+            aria-controls="mobile-navigation"
+            aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
         </div>
 
-        {/* Mobile nav */}
         {isOpen && (
-          <nav className="md:hidden pb-3 border-t border-gray-100 animate-slide-down">
+          <nav
+            id="mobile-navigation"
+            className="md:hidden pb-3 border-t border-gray-100 animate-slide-down"
+            aria-label="Mobile navigation"
+          >
             <ul className="flex flex-col gap-1 pt-3">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to;
@@ -73,10 +90,12 @@ const AppHeader: React.FC = () => {
                     <Link
                       to={item.to}
                       onClick={closeMenu}
-                      className={`block px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`block px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 ${
+                        isActive
                           ? 'bg-deep-slate text-white'
                           : 'text-deep-slate hover:bg-gray-100'
-                        }`}
+                      }`}
                     >
                       {item.label}
                     </Link>
