@@ -29,13 +29,11 @@
     "socket.io-client": "^4.8.3",
     "uuid": "^9.0.0",
     "y-websocket": "^3.0.0",
-    "yjs": "^13.6.29",
-    "react-spring": "^9.7.3",
-    "html-to-image": "^1.11.11",
-    "d3": "^7.8.5"
+    "yjs": "^13.6.29"
   },
   "devDependencies": {
     "@adobe/css-tools": "^4.4.4",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -61,7 +59,6 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "typescript-eslint": "^7.0.0",
-    "@types/d3": "^7.4.3"
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   }

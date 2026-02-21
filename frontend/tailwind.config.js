@@ -81,6 +81,31 @@ export default {
           '0%': { transform: 'rotateY(90deg)', opacity: '0' },
           '100%': { transform: 'rotateY(0deg)', opacity: '1' },
         },
+        // Bottom sheet slide up
+        'slide-up': {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        // Backdrop fade in
+        'backdrop-fade': {
+          '0%': { backgroundColor: 'rgba(0, 0, 0, 0)' },
+          '100%': { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+        },
+        // Slide down and fade out
+        'slide-down-fade': {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(100%)', opacity: '0' },
+        },
+        // Pulse for loading states
+        'pulse-soft': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
+        },
+        // Phone notification slide
+        'slide-down': {
+          '0%': { transform: 'translateY(-100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         'coin-fly': 'coin-fly 0.7s ease-out forwards',
@@ -93,6 +118,11 @@ export default {
         'draw-check': 'draw-check 0.5s ease-out forwards',
         'fill-bar': 'fill-bar 1.8s ease-in-out forwards',
         'flip-in': 'flip-in 0.3s ease-out both',
+        'slide-up': 'slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) both',
+        'backdrop-fade': 'backdrop-fade 0.3s ease-out both',
+        'slide-down-fade': 'slide-down-fade 0.3s cubic-bezier(0.32, 0.72, 0, 1) both',
+        'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
+        'slide-down': 'slide-down 0.3s ease-out both',
       },
     },
   },
