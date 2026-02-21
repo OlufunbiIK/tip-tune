@@ -9,6 +9,7 @@ import MusicPlayer, { tracks } from "./components/player/MusicPlayer";
 import { ArtistOnboarding } from "./components/ArtistOnboarding";
 
 import AnalyticsDashboard from "./components/analytics/AnalyticsDashboard";
+import ArtistProfilePage from "./pages/ArtistProfilePage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/leaderboards" element={<LeaderboardsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />
+          <Route path="/artists/:artistId" element={<ArtistProfilePage />} />
           {/* <Route path="/music-player" element={<MusicPlayer />} /> */}
           <Route path="*" element={<NotFoundPage />} />
           <Route path="/onboarding" element={<ArtistOnboarding />} />

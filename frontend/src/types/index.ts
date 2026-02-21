@@ -266,3 +266,29 @@ export interface UserProfile {
   avatar: string;
   walletAddress: string;
 }
+
+export interface ArtistSocialLinks {
+  website?: string;
+  twitter?: string;
+  instagram?: string;
+  youtube?: string;
+  tiktok?: string;
+}
+
+export interface ArtistProfilePublic {
+  id: string;
+  artistName: string;
+  bio: string;
+  profileImage: string;
+  coverImage: string;
+  totalTipsReceived: number;
+  followerCount: number;
+  isFollowing: boolean;
+  socialLinks: ArtistSocialLinks;
+}
+
+export interface ArtistProfilePageData {
+  artist: ArtistProfilePublic;
+  tracks: Track[];
+  recentTips: Tip[];
+}
