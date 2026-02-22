@@ -25,6 +25,7 @@ import { CommentsModule } from './comments/comments.module';
 import { CollaborationModule } from './collaboration/collaboration.module';
 import { VerificationModule } from './verification/verification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { EmbedModule } from './embed/embed.module';
 
 
 @Module({
@@ -68,6 +69,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     CollaborationModule,
     VerificationModule,
     AnalyticsModule,
+    EmbedModule,
   ],
   controllers: [],
   providers: [],
