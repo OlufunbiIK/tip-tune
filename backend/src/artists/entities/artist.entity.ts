@@ -9,8 +9,9 @@ import {
   OneToMany,
 } from "typeorm";
 import { User } from "../../users/entities/user.entity";
-import { Track } from "@/tracks/entities/track.entity";
-import { Tip } from "@/tips/tips.entity";
+import { Track } from "../../tracks/entities/track.entity";
+import { Tip } from "../../tips/entities/tip.entity";
+import { Collaboration } from "../../collaboration/entities/collaboration.entity";
 
 @Entity("artists")
 export class Artist {
@@ -24,6 +25,15 @@ export class Artist {
   @Column({ type: "uuid", unique: true })
   userId: string;
 
+  @OneToMany(() => Track, (track) => track.artist)
+  tracks: Track[];
+
+  @OneToMany(() => Tip, (tip) => tip.artist)
+  tips: Tip[];
+
+  @OneToMany(() => Collaboration, (collab) => collab.artist)
+  collaborations: Collaboration[];
+
   @Column()
   artistName: string;
 
@@ -36,12 +46,6 @@ export class Artist {
   @Column({ nullable: true })
   profileImage: string;
 
-  @OneToMany(() => Track, (track) => track.artist)
-  tracks: Track[];
-
-  @OneToMany(() => Tip, (tip) => tip.toArtist)
-  tips: Tip[];
-
   @Column({ nullable: true })
   coverImage: string;
 
@@ -53,6 +57,9 @@ export class Artist {
 
   @Column({ default: true })
   emailNotifications: boolean;
+
+  @Column({ default: false, name: 'is_verified' })
+  isVerified: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

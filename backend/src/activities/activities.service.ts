@@ -6,10 +6,11 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Brackets } from 'typeorm';
 import { Activity, ActivityType, EntityType } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { ActivityFeedQueryDto } from './dto/activity-feed-query.dto';
+import { EntityActivityQueryDto } from './dto/entity-activity-query.dto';
 import { UsersService } from '../users/users.service';
 
 export interface PaginatedActivityResponse {
@@ -180,6 +181,63 @@ export class ActivitiesService {
     );
 
     return { count: result.affected || 0 };
+  }
+
+  /**
+   * Get activities for a playlist (including smart playlist refreshes)
+   */
+  async getPlaylistActivities(
+    playlistId: string,
+    query: EntityActivityQueryDto,
+  ): Promise<PaginatedActivityResponse> {
+    const { page = 1, limit = 20, activityType } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.activityRepository
+      .createQueryBuilder('activity')
+      .leftJoinAndSelect('activity.user', 'user')
+      .where(
+        new Brackets((qb) => {
+          qb.where(
+            'activity.entityType = :playlistType AND activity.entityId = :playlistId',
+            {
+              playlistType: EntityType.PLAYLIST,
+              playlistId,
+            },
+          ).orWhere(
+            "activity.entityType = :smartType AND activity.metadata ->> 'playlistId' = :playlistId",
+            {
+              smartType: EntityType.SMART_PLAYLIST,
+              playlistId,
+            },
+          );
+        }),
+      )
+      .orderBy('activity.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    if (activityType) {
+      queryBuilder.andWhere('activity.activityType = :activityType', {
+        activityType,
+      });
+    }
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        unseenCount: 0,
+      },
+    };
   }
 
   /**

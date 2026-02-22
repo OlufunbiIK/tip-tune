@@ -36,10 +36,10 @@ export const useNotifications = () => {
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-    // Remove /api if it exists in base url for socket connection, assuming socket is at root
-    const socketUrl = apiUrl.replace('/api', '');
+    // Use /notifications namespace
+    const socketUrl = `${apiUrl.replace('/api', '')}/notifications`;
 
-    if (!token || !publicKey) return;
+    if (!token) return;
 
     socketRef.current = io(socketUrl, {
       auth: { token },
@@ -64,7 +64,7 @@ export const useNotifications = () => {
         socketRef.current.disconnect();
       }
     };
-  }, [publicKey]);
+  }, []);
 
   // Initial fetch
   useEffect(() => {

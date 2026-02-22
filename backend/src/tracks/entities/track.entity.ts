@@ -11,6 +11,7 @@ import {
 import { Artist } from "../../artists/entities/artist.entity";
 import { Tip } from "../../tips/entities/tip.entity";
 import { TrackGenre } from "../../genres/entities/track-genre.entity";
+import { Collaboration } from "../../collaboration/entities/collaboration.entity";
 
 @Entity("tracks")
 export class Track {
@@ -80,6 +81,9 @@ export class Track {
 
   @OneToMany(() => TrackGenre, (trackGenre) => trackGenre.track)
   trackGenres: TrackGenre[];
+
+  @OneToMany(() => Collaboration, (collab) => collab.track)
+  collaborations: Collaboration[];
 
   @CreateDateColumn()
   createdAt: Date;

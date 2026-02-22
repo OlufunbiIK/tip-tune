@@ -15,6 +15,8 @@ import {
   FollowPaginationQueryDto,
   PaginatedFollowResponseDto,
 } from './dto/pagination.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserFollowedEvent } from './events/user-followed.event';
 
 @Injectable()
 export class FollowsService {
@@ -28,7 +30,8 @@ export class FollowsService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly artistsService: ArtistsService,
-  ) {}
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   /**
    * Follow an artist
@@ -61,6 +64,12 @@ export class FollowsService {
 
     const saved = await this.followRepo.save(follow);
     this.logger.log(`User ${followerId} followed artist ${artistId}`);
+
+    this.eventEmitter.emit(
+      'user.followed',
+      new UserFollowedEvent(followerId, artistId),
+    );
+
     return saved;
   }
 

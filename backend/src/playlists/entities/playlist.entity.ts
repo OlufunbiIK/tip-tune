@@ -7,10 +7,13 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  OneToOne,
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { PlaylistTrack } from './playlist-track.entity';
+import { PlaylistCollaborator } from './playlist-collaborator.entity';
+import { SmartPlaylist } from './smart-playlist.entity';
 
 @Entity('playlists')
 @Index(['userId', 'isPublic'])
@@ -30,6 +33,9 @@ export class Playlist {
 
   @Column({ default: false, name: 'is_public' })
   isPublic: boolean;
+
+  @Column({ default: false, name: 'approval_required' })
+  approvalRequired: boolean;
 
   @Column({ length: 500, nullable: true, name: 'cover_image' })
   coverImage: string;
@@ -55,4 +61,13 @@ export class Playlist {
     cascade: true,
   })
   playlistTracks: PlaylistTrack[];
+
+  @OneToMany(
+    () => PlaylistCollaborator,
+    (collaborator) => collaborator.playlist,
+  )
+  collaborators: PlaylistCollaborator[];
+
+  @OneToOne(() => SmartPlaylist, (smartPlaylist) => smartPlaylist.playlist)
+  smartPlaylist: SmartPlaylist;
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { FollowsController } from './follows.controller';
 import { FollowsService } from './follows.service';
 import { Follow } from './entities/follow.entity';
@@ -13,6 +14,7 @@ import { AuthModule } from '../auth/auth.module';
     TypeOrmModule.forFeature([Follow, Artist, User]),
     ArtistsModule,
     AuthModule,
+    EventEmitterModule,
   ],
   controllers: [FollowsController],
   providers: [FollowsService],

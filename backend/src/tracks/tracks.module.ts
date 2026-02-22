@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TracksService } from './tracks.service';
 import { TracksController } from './tracks.controller';
 import { Track } from './entities/track.entity';
@@ -12,6 +13,7 @@ import { ActivitiesModule } from '../activities/activities.module';
     TypeOrmModule.forFeature([Track, Artist]),
     StorageModule,
     forwardRef(() => ActivitiesModule),
+    EventEmitterModule,
   ],
   controllers: [TracksController],
   providers: [TracksService],

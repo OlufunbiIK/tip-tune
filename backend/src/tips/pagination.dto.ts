@@ -1,7 +1,7 @@
 import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { TipStatus } from './tips.entity';
+import { TipStatus } from './entities/tip.entity';
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })

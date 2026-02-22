@@ -34,6 +34,14 @@ export class UpdatePlaylistDto {
   isPublic?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Whether non-owner edits require approval',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  approvalRequired?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Cover image URL',
     example: 'https://example.com/new-cover.jpg',
   })

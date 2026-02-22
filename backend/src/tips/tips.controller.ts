@@ -22,12 +22,12 @@ import {
 import { TipsService } from './tips.service';
 import { CreateTipDto } from './create-tips.dto';
 import { PaginationQueryDto } from './pagination.dto';
-import { Tip, TipStatus } from './tips.entity';
+import { Tip, TipStatus } from './entities/tip.entity';
 
 @ApiTags('Tips')
 @Controller('tips')
 export class TipsController {
-  constructor(private readonly tipsService: TipsService) {}
+  constructor(private readonly tipsService: TipsService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

@@ -11,8 +11,8 @@ const HomePage = () => {
           <div className="text-xl font-bold">TipTune</div>
           <div className="flex items-center gap-4">
             {isConnected && <NotificationCenter />}
-            
-            <button 
+
+            <button
               onClick={() => !isConnected && connect()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
@@ -27,8 +27,12 @@ const HomePage = () => {
           Real-time music tips powered by Stellar
         </p>
       </div>
+
     </div>
   );
 };
 
+
 export default HomePage;
+
+

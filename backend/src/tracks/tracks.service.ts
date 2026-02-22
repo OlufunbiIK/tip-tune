@@ -6,6 +6,9 @@ import { CreateTrackDto } from './dto/create-track.dto';
 import { TrackFilterDto } from './dto/pagination.dto';
 import { StorageService } from '../storage/storage.service';
 import { ActivitiesService } from '../activities/activities.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TrackUploadedEvent } from './events/track-uploaded.event';
+import { TrackPlayedEvent } from './events/track-played.event';
 
 interface PaginatedResult<T> {
   data: T[];
@@ -25,7 +28,8 @@ export class TracksService {
     private storageService: StorageService,
     @Inject(forwardRef(() => ActivitiesService))
     private activitiesService: ActivitiesService,
-  ) {}
+    private eventEmitter: EventEmitter2,
+  ) { }
 
   async create(createTrackDto: CreateTrackDto, file?: Express.Multer.File): Promise<Track> {
     try {
@@ -40,7 +44,7 @@ export class TracksService {
         // Save file first
         const fileResult = await this.storageService.saveFile(file);
         const fileInfo = await this.storageService.getFileInfo(fileResult.filename);
-        
+
         filename = fileResult.filename;
         url = fileResult.url;
         streamingUrl = await this.storageService.getStreamingUrl(fileResult.filename);
@@ -62,7 +66,14 @@ export class TracksService {
 
       const savedTrack = await this.tracksRepository.save(track);
       this.logger.log(`Track created successfully: ${savedTrack.id}`);
-      
+
+      if (savedTrack.artistId) {
+        this.eventEmitter.emit(
+          'track.uploaded',
+          new TrackUploadedEvent(savedTrack.id, savedTrack.artistId),
+        );
+      }
+
       // Track activity for new track
       if (savedTrack.artistId) {
         try {
@@ -80,13 +91,17 @@ export class TracksService {
           this.logger.warn(`Failed to track activity for new track: ${error.message}`);
         }
       }
-      
+
       return savedTrack;
     } catch (error) {
       this.logger.error(`Failed to create track: ${error.message}`);
       throw error;
     }
   }
+
+  // After create method, actually let's put it before return savedTrack
+  // Re-writing the chunk to include the end of create method
+
 
   async findAll(filter: TrackFilterDto): Promise<PaginatedResult<Track>> {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'DESC', ...filters } = filter;
@@ -132,41 +147,41 @@ export class TracksService {
   }
 
   async findOne(id: string): Promise<Track> {
-    const track = await this.tracksRepository.findOne({ 
+    const track = await this.tracksRepository.findOne({
       where: { id },
       relations: ['artist'],
     });
-    
+
     if (!track) {
       throw new NotFoundException(`Track with ID ${id} not found`);
     }
-    
+
     return track;
   }
 
   async update(id: string, updateTrackDto: Partial<CreateTrackDto>): Promise<Track> {
     const track = await this.findOne(id);
-    
+
     Object.assign(track, updateTrackDto);
-    
+
     const updatedTrack = await this.tracksRepository.save(track);
     this.logger.log(`Track updated successfully: ${id}`);
-    
+
     return updatedTrack;
   }
 
   async remove(id: string): Promise<void> {
     const track = await this.findOne(id);
-    
+
     try {
       // Delete file from storage if it exists
       if (track.filename) {
         await this.storageService.deleteFile(track.filename);
       }
-      
+
       // Delete track record
       await this.tracksRepository.remove(track);
-      
+
       this.logger.log(`Track deleted successfully: ${id}`);
     } catch (error) {
       this.logger.error(`Failed to delete track: ${error.message}`);
@@ -176,21 +191,28 @@ export class TracksService {
 
   async incrementPlayCount(id: string): Promise<Track> {
     const track = await this.findOne(id);
-    
+
     track.plays += 1;
-    
+
     const updatedTrack = await this.tracksRepository.save(track);
-    
+
+    if (updatedTrack.artistId) {
+      this.eventEmitter.emit(
+        'track.played',
+        new TrackPlayedEvent(updatedTrack.id, updatedTrack.artistId, null),
+      );
+    }
+
     return updatedTrack;
   }
 
   async addTips(id: string, amount: number): Promise<Track> {
     const track = await this.findOne(id);
-    
+
     track.totalTips += amount;
-    
+
     const updatedTrack = await this.tracksRepository.save(track);
-    
+
     return updatedTrack;
   }
 

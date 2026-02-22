@@ -67,6 +67,27 @@ export class CreateTipDto {
   @IsEnum(TipType)
   type?: TipType;
 
+  @ApiProperty({
+    description: 'Asset Code (default XLM)',
+    example: 'USDC',
+    default: 'XLM',
+    maxLength: 12,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  assetCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Asset Issuer (required for non-native assets)',
+    example: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+    maxLength: 56,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(56)
+  assetIssuer?: string;
+
   @ApiPropertyOptional({
     description: 'Exchange rate for fiat conversion',
     example: 0.089,

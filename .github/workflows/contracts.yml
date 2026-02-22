@@ -1,0 +1,74 @@
+name: Soroban Contracts CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/**'
+
+jobs:
+  test:
+    name: Test Contracts
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            contracts/tip-escrow/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Run Tests
+        working-directory: contracts/tip-escrow
+        run: cargo test --verbose
+      
+      - name: Build Contract
+        working-directory: contracts/tip-escrow
+        run: cargo build --target wasm32-unknown-unknown --release
+      
+      - name: Check WASM Size
+        working-directory: contracts/tip-escrow
+        run: |
+          WASM_SIZE=$(wc -c < target/wasm32-unknown-unknown/release/tip_escrow.wasm)
+          echo "WASM size: $WASM_SIZE bytes"
+          if [ $WASM_SIZE -gt 1000000 ]; then
+            echo "⚠️  Warning: WASM file is larger than 1MB"
+          fi
+
+  lint:
+    name: Lint Contracts
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      
+      - name: Run Clippy
+        working-directory: contracts/tip-escrow
+        run: cargo clippy -- -D warnings
+      
+      - name: Check Formatting
+        working-directory: contracts/tip-escrow
+        run: cargo fmt -- --check

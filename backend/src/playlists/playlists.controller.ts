@@ -8,7 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  Req,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
@@ -23,15 +22,27 @@ import {
   ApiCookieAuth,
 } from '@nestjs/swagger';
 import { PlaylistsService } from './playlists.service';
+import { SmartPlaylistsService } from './smart-playlists.service';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { AddTrackDto } from './dto/add-track.dto';
 import { ReorderTracksDto } from './dto/reorder-tracks.dto';
 import { DuplicatePlaylistDto } from './dto/duplicate-playlist.dto';
 import { PlaylistPaginationDto } from './dto/pagination.dto';
+import { InviteCollaboratorDto } from './dto/invite-collaborator.dto';
+import { UpdateCollaboratorRoleDto } from './dto/update-collaborator-role.dto';
+import { CreateSmartPlaylistDto } from './dto/create-smart-playlist.dto';
+import { PreviewSmartPlaylistDto } from './dto/preview-smart-playlist.dto';
+import { ChangeRequestQueryDto } from './dto/change-request-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser, CurrentUserData } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../auth/decorators/current-user.decorator';
 import { Playlist } from './entities/playlist.entity';
+import { PlaylistChangeRequest } from './entities/playlist-change-request.entity';
+import { PlaylistCollaborator } from './entities/playlist-collaborator.entity';
+import { EntityActivityQueryDto } from '../activities/dto/entity-activity-query.dto';
 
 @ApiTags('Playlists')
 @Controller('playlists')
@@ -39,7 +50,10 @@ import { Playlist } from './entities/playlist.entity';
 @ApiBearerAuth()
 @ApiCookieAuth()
 export class PlaylistsController {
-  constructor(private readonly playlistsService: PlaylistsService) {}
+  constructor(
+    private readonly playlistsService: PlaylistsService,
+    private readonly smartPlaylistsService: SmartPlaylistsService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -74,6 +88,40 @@ export class PlaylistsController {
     @Query() paginationDto: PlaylistPaginationDto,
   ) {
     return this.playlistsService.findAll(user.userId, paginationDto);
+  }
+
+  @Post('smart/preview')
+  @ApiOperation({ summary: 'Preview tracks for a smart playlist' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Smart playlist preview generated',
+  })
+  async previewSmartPlaylist(
+    @CurrentUser() user: CurrentUserData,
+    @Body() previewDto: PreviewSmartPlaylistDto,
+  ) {
+    return this.smartPlaylistsService.previewTracks(
+      user.userId,
+      previewDto.criteria,
+    );
+  }
+
+  @Post('smart')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a smart playlist' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Smart playlist created successfully',
+    type: Playlist,
+  })
+  async createSmartPlaylist(
+    @CurrentUser() user: CurrentUserData,
+    @Body() createSmartPlaylistDto: CreateSmartPlaylistDto,
+  ): Promise<Playlist> {
+    return this.smartPlaylistsService.createSmartPlaylist(
+      user.userId,
+      createSmartPlaylistDto,
+    );
   }
 
   @Get('public')
@@ -127,6 +175,25 @@ export class PlaylistsController {
     @CurrentUser() user: CurrentUserData,
   ): Promise<Playlist> {
     return this.playlistsService.findOne(id, user.userId);
+  }
+
+  @Get(':id/activities')
+  @ApiOperation({ summary: 'Get playlist activity log' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Playlist activities retrieved successfully',
+  })
+  async getPlaylistActivities(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @CurrentUser() user: CurrentUserData,
+    @Query() query: EntityActivityQueryDto,
+  ) {
+    return this.playlistsService.getPlaylistActivities(
+      playlistId,
+      user.userId,
+      query,
+    );
   }
 
   @Patch(':id')
@@ -200,7 +267,7 @@ export class PlaylistsController {
     @Param('id', ParseUUIDPipe) playlistId: string,
     @CurrentUser() user: CurrentUserData,
     @Body() addTrackDto: AddTrackDto,
-  ): Promise<Playlist> {
+  ): Promise<Playlist | PlaylistChangeRequest> {
     return this.playlistsService.addTrack(playlistId, user.userId, addTrackDto);
   }
 
@@ -226,7 +293,7 @@ export class PlaylistsController {
     @Param('id', ParseUUIDPipe) playlistId: string,
     @Param('trackId', ParseUUIDPipe) trackId: string,
     @CurrentUser() user: CurrentUserData,
-  ): Promise<Playlist> {
+  ): Promise<Playlist | PlaylistChangeRequest> {
     return this.playlistsService.removeTrack(playlistId, trackId, user.userId);
   }
 
@@ -250,7 +317,7 @@ export class PlaylistsController {
     @Param('id', ParseUUIDPipe) playlistId: string,
     @CurrentUser() user: CurrentUserData,
     @Body() reorderTracksDto: ReorderTracksDto,
-  ): Promise<Playlist> {
+  ): Promise<Playlist | PlaylistChangeRequest> {
     return this.playlistsService.reorderTracks(playlistId, user.userId, reorderTracksDto);
   }
 
@@ -298,5 +365,189 @@ export class PlaylistsController {
     @CurrentUser() user: CurrentUserData,
   ) {
     return this.playlistsService.share(playlistId, user.userId);
+  }
+
+  @Get(':id/collaborators')
+  @ApiOperation({ summary: 'List playlist collaborators' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Collaborators retrieved successfully',
+    type: [PlaylistCollaborator],
+  })
+  async listCollaborators(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<PlaylistCollaborator[]> {
+    return this.playlistsService.listCollaborators(playlistId, user.userId);
+  }
+
+  @Post(':id/collaborators')
+  @ApiOperation({ summary: 'Invite a collaborator to a playlist' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Collaborator invited successfully',
+    type: PlaylistCollaborator,
+  })
+  async inviteCollaborator(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @CurrentUser() user: CurrentUserData,
+    @Body() inviteDto: InviteCollaboratorDto,
+  ): Promise<PlaylistCollaborator> {
+    return this.playlistsService.inviteCollaborator(
+      playlistId,
+      user.userId,
+      inviteDto.identifier,
+      inviteDto.role,
+    );
+  }
+
+  @Post(':id/collaborators/:collaboratorId/accept')
+  @ApiOperation({ summary: 'Accept a collaborator invite' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiParam({ name: 'collaboratorId', description: 'Collaborator ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Collaborator invite accepted',
+    type: PlaylistCollaborator,
+  })
+  async acceptCollaboratorInvite(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @Param('collaboratorId', ParseUUIDPipe) collaboratorId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<PlaylistCollaborator> {
+    return this.playlistsService.acceptCollaboratorInvite(
+      playlistId,
+      collaboratorId,
+      user.userId,
+    );
+  }
+
+  @Post(':id/collaborators/:collaboratorId/reject')
+  @ApiOperation({ summary: 'Reject a collaborator invite' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiParam({ name: 'collaboratorId', description: 'Collaborator ID' })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Collaborator invite rejected',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async rejectCollaboratorInvite(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @Param('collaboratorId', ParseUUIDPipe) collaboratorId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<void> {
+    return this.playlistsService.rejectCollaboratorInvite(
+      playlistId,
+      collaboratorId,
+      user.userId,
+    );
+  }
+
+  @Patch(':id/collaborators/:collaboratorId')
+  @ApiOperation({ summary: 'Update collaborator role' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiParam({ name: 'collaboratorId', description: 'Collaborator ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Collaborator role updated',
+    type: PlaylistCollaborator,
+  })
+  async updateCollaboratorRole(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @Param('collaboratorId', ParseUUIDPipe) collaboratorId: string,
+    @CurrentUser() user: CurrentUserData,
+    @Body() updateDto: UpdateCollaboratorRoleDto,
+  ): Promise<PlaylistCollaborator> {
+    return this.playlistsService.updateCollaboratorRole(
+      playlistId,
+      collaboratorId,
+      user.userId,
+      updateDto.role,
+    );
+  }
+
+  @Delete(':id/collaborators/:collaboratorId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove a collaborator from a playlist' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiParam({ name: 'collaboratorId', description: 'Collaborator ID' })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Collaborator removed successfully',
+  })
+  async removeCollaborator(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @Param('collaboratorId', ParseUUIDPipe) collaboratorId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<void> {
+    return this.playlistsService.removeCollaborator(
+      playlistId,
+      collaboratorId,
+      user.userId,
+    );
+  }
+
+  @Get(':id/change-requests')
+  @ApiOperation({ summary: 'List playlist change requests' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Change requests retrieved successfully',
+    type: [PlaylistChangeRequest],
+  })
+  async listChangeRequests(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @CurrentUser() user: CurrentUserData,
+    @Query() query: ChangeRequestQueryDto,
+  ): Promise<PlaylistChangeRequest[]> {
+    return this.playlistsService.listChangeRequests(
+      playlistId,
+      user.userId,
+      query.status,
+    );
+  }
+
+  @Post(':id/change-requests/:changeRequestId/approve')
+  @ApiOperation({ summary: 'Approve a playlist change request' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiParam({ name: 'changeRequestId', description: 'Change request ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Change request approved and applied',
+    type: Playlist,
+  })
+  async approveChangeRequest(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @Param('changeRequestId', ParseUUIDPipe) changeRequestId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<Playlist> {
+    return this.playlistsService.approveChangeRequest(
+      playlistId,
+      changeRequestId,
+      user.userId,
+    );
+  }
+
+  @Post(':id/change-requests/:changeRequestId/reject')
+  @ApiOperation({ summary: 'Reject a playlist change request' })
+  @ApiParam({ name: 'id', description: 'Playlist ID' })
+  @ApiParam({ name: 'changeRequestId', description: 'Change request ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Change request rejected',
+    type: PlaylistChangeRequest,
+  })
+  async rejectChangeRequest(
+    @Param('id', ParseUUIDPipe) playlistId: string,
+    @Param('changeRequestId', ParseUUIDPipe) changeRequestId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<PlaylistChangeRequest> {
+    return this.playlistsService.rejectChangeRequest(
+      playlistId,
+      changeRequestId,
+      user.userId,
+    );
   }
 }

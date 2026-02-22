@@ -17,9 +17,9 @@ const Button = ({
     'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
   
   const variantStyles = {
-    primary: 'bg-blue-primary text-white hover:bg-blue-600 focus:ring-blue-primary',
-    secondary: 'bg-ice-blue text-navy hover:bg-cyan-400 focus:ring-ice-blue',
-    outline: 'border-2 border-blue-primary text-blue-primary hover:bg-blue-primary hover:text-white focus:ring-blue-primary',
+    primary: 'bg-primary-blue text-white hover:bg-primary-blue/90 focus:ring-primary-blue',
+    secondary: 'bg-secondary-indigo text-white hover:bg-secondary-indigo/90 focus:ring-secondary-indigo',
+    outline: 'border-2 border-primary-blue text-primary-blue hover:bg-primary-blue hover:text-white focus:ring-primary-blue',
   };
 
   const sizeStyles = {

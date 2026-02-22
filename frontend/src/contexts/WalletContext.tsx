@@ -4,9 +4,9 @@ import React, { createContext, useState, useEffect, useCallback, ReactNode } fro
 import {
   setAllowed,
   isConnected,
-  getPublicKey,
+  getAddress,
   getNetwork,
-  setNetwork,
+
   signTransaction,
 } from '@stellar/freighter-api';
 import type { Network, WalletState, WalletContextType, WalletErrorCode } from '../types/wallet';
@@ -59,11 +59,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
 
         const connected = await isConnected();
         if (connected) {
-          const publicKey = await getPublicKey();
-          let network: Network = defaultNetwork;
+          const { address } = await getAddress();
+          const publicKey = address;
           
+          // Validate publicKey before proceeding
+          if (!publicKey || publicKey.trim() === '') {
+            console.debug('Connected but no valid address returned');
+            return;
+          }
+          
+          let network: Network = defaultNetwork;
+
           try {
-            const freighterNetwork = await getNetwork();
+            const { network: freighterNetwork } = await getNetwork();
             // Map Freighter network to our Network type
             if (freighterNetwork === 'PUBLIC') {
               network = 'mainnet';
@@ -76,7 +84,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
             // If getNetwork fails, use default
             network = defaultNetwork;
           }
-          
+
           setState((prev) => ({
             ...prev,
             isConnected: true,
@@ -99,10 +107,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
 
   // Fetch balance for a given address and network
   const fetchBalance = useCallback(async (publicKey: string, network: Network) => {
+    // Validate publicKey before making request
+    if (!publicKey || publicKey.trim() === '') {
+      console.debug('Cannot fetch balance: no valid publicKey');
+      return;
+    }
+
     try {
       const server = getServer(network);
       const account = await server.loadAccount(publicKey);
-      
+
       // Find XLM balance
       const xlmBalance = account.balances.find(
         (balance) => balance.asset_type === 'native'
@@ -152,7 +166,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
       }
 
       // Get public key
-      const publicKey = await getPublicKey();
+      const { address } = await getAddress();
+      const publicKey = address;
       if (!publicKey) {
         throw new WalletError(
           'UNKNOWN_ERROR' as WalletErrorCode,
@@ -163,7 +178,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
       // Get network
       let network: Network = defaultNetwork;
       try {
-        const freighterNetwork = await getNetwork();
+        const { network: freighterNetwork } = await getNetwork();
         if (freighterNetwork === 'PUBLIC') {
           network = 'mainnet';
         } else if (freighterNetwork === 'TESTNET') {
@@ -247,12 +262,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
       setState((prev) => ({ ...prev, error: null }));
 
       // Map our network type to Freighter network format
-      const freighterNetwork = network === 'mainnet' ? 'PUBLIC' : 'TESTNET';
-      
-      await setNetwork({
+      // const freighterNetwork = network === 'mainnet' ? 'PUBLIC' : 'TESTNET';
+
+      /* await setNetwork({
         network: freighterNetwork,
         networkPassphrase: getNetworkPassphrase(network),
-      });
+      }); */
+      console.warn('Network switching via API is not supported in this version.');
 
       const publicKey = state.publicKey;
       if (publicKey) {
@@ -300,14 +316,12 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
         setState((prev) => ({ ...prev, error: null }));
 
         // Sign transaction using Freighter
-        const freighterNetwork = state.network === 'mainnet' ? 'PUBLIC' : 'TESTNET';
-        const signedXdr = await signTransaction(transactionXdr, {
-          network: freighterNetwork,
+        const response = await signTransaction(transactionXdr, {
           networkPassphrase: getNetworkPassphrase(state.network),
-          accountToSign: state.publicKey,
+          address: state.publicKey,
         });
 
-        return signedXdr;
+        return response.signedTxXdr;
       } catch (error) {
         let walletError: WalletError;
 

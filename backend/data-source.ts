@@ -1,5 +1,7 @@
 import { DataSource } from 'typeorm';
 import * as path from 'path';
+import * as dotenv from 'dotenv';
+dotenv.config(); // Load .env variables
 
 /**
  * TypeORM DataSource for CLI (migrations).
