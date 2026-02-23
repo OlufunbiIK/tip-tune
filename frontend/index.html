@@ -8,6 +8,34 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('tiptune.theme.preferences.v1');
+          var parsed = raw ? JSON.parse(raw) : {};
+          var mode =
+            parsed.mode === 'dark' || parsed.mode === 'light' || parsed.mode === 'auto'
+              ? parsed.mode
+              : 'auto';
+          var resolved =
+            mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : mode === 'auto'
+                ? 'light'
+                : mode;
+          var root = document.documentElement;
+          root.classList.toggle('dark', resolved === 'dark');
+          root.classList.toggle('light', resolved === 'light');
+          root.classList.toggle('theme-high-contrast', parsed.highContrast === true);
+          root.classList.toggle('theme-oled', parsed.oledDark === true && resolved === 'dark');
+          root.classList.toggle('theme-no-animations', parsed.animationsEnabled === false);
+          root.dataset.themeMode = mode;
+          root.dataset.themeResolved = resolved;
+          root.dataset.themeReady = 'false';
+          root.style.colorScheme = resolved;
+        } catch (_) {}
+      })();
+    </script>
     <title>TipTune - Real-time music tips powered by Stellar</title>
   </head>
   <body>

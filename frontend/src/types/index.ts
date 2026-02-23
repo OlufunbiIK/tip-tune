@@ -291,6 +291,7 @@ export interface ArtistProfilePublic {
   bio: string;
   profileImage: string;
   coverImage: string;
+  accentColor?: string;
   totalTipsReceived: number;
   followerCount: number;
   isFollowing: boolean;

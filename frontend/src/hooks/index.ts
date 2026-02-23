@@ -10,3 +10,5 @@ export {
 } from './useGestures';
 export type { UseSwipeGestureOptions, UsePullToRefreshOptions, UseDoubleTapOptions } from './useGestures';
 export { useHaptic } from '../utils/haptics';
+export { useTheme } from './useTheme';
+export { useTipCombo } from './useTipCombo';

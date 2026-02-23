@@ -80,6 +80,7 @@ const mockArtists: Record<string, ArtistProfilePublic> = {
     bio: "Fusing electronic soul with afrobeats, one drop at a time.",
     profileImage: "https://i.pravatar.cc/300?u=djmelodica-profile",
     coverImage: "https://picsum.photos/seed/dj-melodica-cover/1400/420",
+    accentColor: "#f97316",
     totalTipsReceived: 4481.5,
     followerCount: 1245,
     isFollowing: false,

@@ -27,6 +27,8 @@ export interface DisplaySettings {
   theme: 'dark' | 'light' | 'system';
   compactMode: boolean;
   showAnimations: boolean;
+  highContrast?: boolean;
+  oledDark?: boolean;
 }
 
 export interface UserSettings {

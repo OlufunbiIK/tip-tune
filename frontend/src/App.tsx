@@ -19,7 +19,7 @@ import LivePerformanceMode from "./components/live-performance/LivePerformanceMo
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-deep-slate">
+    <div className="min-h-screen bg-app text-app theme-transition">
       <AppHeader />
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
         <Routes>

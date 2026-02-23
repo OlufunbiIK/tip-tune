@@ -4,3 +4,4 @@ export { default as Card } from "./common/Card";
 
 // Track components
 export * from "./track";
+export * from "./combo";

@@ -98,9 +98,9 @@ const SettingsPage = () => {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Settings className="w-8 h-8 text-primary-blue" />
-            <h1 className="text-3xl font-bold text-white">Settings</h1>
+            <h1 className="text-3xl font-bold text-app">Settings</h1>
           </div>
-          <p className="text-gray-500">
+          <p className="text-muted">
             Manage your account settings and preferences
           </p>
         </div>
@@ -108,7 +108,7 @@ const SettingsPage = () => {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar Navigation */}
           <nav className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-2">
+            <div className="rounded-xl border border-app bg-surface shadow-sm p-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -119,7 +119,7 @@ const SettingsPage = () => {
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                       isActive
                         ? 'bg-primary-blue text-white'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-deep-slate'
+                        : 'text-muted hover:bg-surface-muted hover:text-app'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -139,7 +139,7 @@ const SettingsPage = () => {
 
           {/* Main Content */}
           <main className="flex-1">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="rounded-xl border border-app bg-surface shadow-sm p-6">
               {renderTabContent()}
             </div>
           </main>
