@@ -1,6 +1,5 @@
 import { ArgumentMetadata, BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 import { ModerationService } from '../moderation.service';
-import { Tip } from '../../tips/entities/tip.entity';
 
 @Injectable()
 export class ModerateMessagePipe implements PipeTransform {
@@ -11,25 +10,20 @@ export class ModerateMessagePipe implements PipeTransform {
       return value;
     }
 
-    if (!value.message) {
+    if (!value.message || typeof value.message !== 'string') {
       return value;
     }
 
-    const tempTip = new Tip();
-    tempTip.id = 'temp';
-    tempTip.message = value.message;
+    const result = await this.moderationService.previewMessage(value.message);
 
-    const log = await this.moderationService.moderateTipMessage(tempTip, null);
-
-    if (log && log.moderationResult === 'blocked') {
+    if (result.result === 'blocked') {
       throw new BadRequestException('Tip message contains blocked content');
     }
 
-    if (tempTip.message !== value.message) {
-      value.message = tempTip.message;
+    if (result.result === 'filtered' && result.sanitizedMessage !== value.message) {
+      value.message = result.sanitizedMessage;
     }
 
     return value;
   }
 }
-

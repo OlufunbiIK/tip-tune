@@ -35,13 +35,13 @@ export class ModerationService {
     return [...global, ...artistKeywords];
   }
 
-  async moderateTipMessage(tip: Tip, artistId: string | null): Promise<MessageModerationLog | null> {
+  async moderateTipMessage(tip: Tip, artistUserId: string | null): Promise<MessageModerationLog | null> {
     if (!tip.message) {
       return null;
     }
 
-    const artist = artistId
-      ? await this.artistRepository.findOne({ where: { id: artistId } })
+    const artist = artistUserId
+      ? await this.artistRepository.findOne({ where: { userId: artistUserId } })
       : null;
 
     const keywords = await this.getKeywordsForArtist(artist ? artist.id : null);
@@ -75,6 +75,13 @@ export class ModerationService {
     }
 
     return saved;
+  }
+
+  async previewMessage(
+    message: string,
+  ): Promise<MessageFilterResult> {
+    const keywords = await this.getKeywordsForArtist(null);
+    return this.messageFilterService.applyFilters(message, keywords);
   }
 
   mapFilterResult(result: MessageFilterResult['result']): ModerationResult {
