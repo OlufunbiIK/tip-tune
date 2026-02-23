@@ -15,6 +15,7 @@ import SearchPage from "./pages/SearchPage";
 import AnalyticsDashboard from "./components/analytics/AnalyticsDashboard";
 import ArtistProfilePage from "./pages/ArtistProfilePage";
 import InstallPrompt from "./components/InstallPrompt";
+import LivePerformanceMode from "./components/live-performance/LivePerformanceMode";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/analytics" element={<AnalyticsDashboard />} />
           <Route path="/artists/:artistId" element={<ArtistProfilePage />} />
           <Route path="/tips/history" element={<TipHistoryPage />} />
+          <Route path="/live-performance" element={<LivePerformanceMode />} />
           {/* <Route path="/music-player" element={<MusicPlayer />} /> */}
           <Route path="*" element={<NotFoundPage />} />
           <Route path="/onboarding" element={<ArtistOnboarding />} />

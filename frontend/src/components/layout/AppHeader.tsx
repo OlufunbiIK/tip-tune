@@ -15,6 +15,7 @@ const AppHeader: React.FC = () => {
     { label: 'Settings', to: '/settings'},
     { label: 'Tip History', to: '/tips/history' },
     { label: 'Analytics', to: '/analytics' },
+    { label: 'Live Mode', to: '/live-performance' },
   ];
 
   const toggleMenu = () => setIsOpen((prev) => !prev);
