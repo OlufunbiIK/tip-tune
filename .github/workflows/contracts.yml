@@ -14,6 +14,16 @@ jobs:
   test:
     name: Test Contracts
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        contract:
+          - tip-escrow
+          - reward-token
+          - royalty-split
+          - tip-verification
+          - auto-royalty-distribution
+          - tip-goal-campaign
+          - tip-nft-badge
     
     steps:
       - uses: actions/checkout@v4
@@ -32,29 +42,45 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            contracts/tip-escrow/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            contracts/${{ matrix.contract }}/target/
+          key: ${{ runner.os }}-cargo-${{ matrix.contract }}-${{ hashFiles(format('contracts/{0}/Cargo.lock', matrix.contract)) }}
       
       - name: Run Tests
-        working-directory: contracts/tip-escrow
+        working-directory: contracts/${{ matrix.contract }}
         run: cargo test --verbose
       
       - name: Build Contract
-        working-directory: contracts/tip-escrow
+        working-directory: contracts/${{ matrix.contract }}
         run: cargo build --target wasm32-unknown-unknown --release
       
       - name: Check WASM Size
-        working-directory: contracts/tip-escrow
+        working-directory: contracts/${{ matrix.contract }}
         run: |
-          WASM_SIZE=$(wc -c < target/wasm32-unknown-unknown/release/tip_escrow.wasm)
-          echo "WASM size: $WASM_SIZE bytes"
-          if [ $WASM_SIZE -gt 1000000 ]; then
-            echo "⚠️  Warning: WASM file is larger than 1MB"
+          CONTRACT_NAME=$(echo "${{ matrix.contract }}" | tr '-' '_')
+          WASM_FILE="target/wasm32-unknown-unknown/release/${CONTRACT_NAME}.wasm"
+          if [ -f "$WASM_FILE" ]; then
+            WASM_SIZE=$(wc -c < "$WASM_FILE")
+            echo "WASM size: $WASM_SIZE bytes"
+            if [ $WASM_SIZE -gt 1000000 ]; then
+              echo "⚠️  Warning: WASM file is larger than 1MB"
+            fi
+          else
+            echo "WASM file not found at $WASM_FILE — skipping size check"
           fi
 
   lint:
     name: Lint Contracts
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        contract:
+          - tip-escrow
+          - reward-token
+          - royalty-split
+          - tip-verification
+          - auto-royalty-distribution
+          - tip-goal-campaign
+          - tip-nft-badge
     
     steps:
       - uses: actions/checkout@v4
@@ -66,9 +92,9 @@ jobs:
           components: clippy, rustfmt
       
       - name: Run Clippy
-        working-directory: contracts/tip-escrow
+        working-directory: contracts/${{ matrix.contract }}
         run: cargo clippy -- -D warnings
       
       - name: Check Formatting
-        working-directory: contracts/tip-escrow
+        working-directory: contracts/${{ matrix.contract }}
         run: cargo fmt -- --check
