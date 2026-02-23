@@ -1,0 +1,19 @@
+
+> tip-tune-backend@0.0.1 test
+> jest src/notifications/notifications.gateway.spec.ts
+
+PASS src/notifications/notifications.gateway.spec.ts
+  NotificationsGateway
+    ✓ should be defined (8 ms)
+    handleConnection
+      ✓ should authenticate user and join user room (3 ms)
+      ✓ should disconnect if no token provided (5 ms)
+      ✓ should disconnect if authentication fails (1 ms)
+    sendNotificationToArtist
+      ✓ should emit tipReceived event to user room (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        2.288 s, estimated 3 s
+Ran all test suites matching /src\/notifications\/notifications.gateway.spec.ts/i.

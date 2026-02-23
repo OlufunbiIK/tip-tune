@@ -1,6 +1,5 @@
 import apiClient from '../utils/api';
 import {
-  Activity,
   ActivityFeedResponse,
   PaginatedResponse,
   Playlist,

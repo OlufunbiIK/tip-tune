@@ -7,17 +7,22 @@ import TipsChart from '../components/dashboard/TipsChart';
 import TopTracks from '../components/dashboard/TopTracks';
 import RecentTips from '../components/dashboard/RecentTips';
 import ProfileSection from '../components/dashboard/ProfileEdit';
+import GoalList from '../components/goals/GoalList';
+import CreateGoalModal from '../components/goals/CreateGoalModal';
+import Button from '../components/common/Button';
 
 const Dashboard: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Data states
     const [stats, setStats] = useState<{ totalTips?: number; totalPlays?: number; supporterCount?: number }>({});
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
     const [topTracks, setTopTracks] = useState<Track[]>([]);
     const [recentTips, setRecentTips] = useState<Tip[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | undefined>(undefined);
+    const [isCreateGoalOpen, setIsCreateGoalOpen] = useState(false);
+    const [refreshGoals, setRefreshGoals] = useState(0);
 
     const loadDashboardData = useCallback(async () => {
         setIsLoading(true);
@@ -52,8 +57,8 @@ const Dashboard: React.FC = () => {
     // See useNotifications hook for example WebSocket implementation
     useEffect(() => {
         const interval = setInterval(() => {
-            if(!isLoading){
-                 const newTip: Tip = {
+            if (!isLoading) {
+                const newTip: Tip = {
                     id: `tip_${Date.now()}`,
                     tipperName: 'Realtime Fan',
                     tipperAvatar: 'https://i.pravatar.cc/150?u=realtime',
@@ -80,18 +85,39 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <DashboardStats 
-                totalTips={stats.totalTips} 
-                totalPlays={stats.totalPlays} 
+            <DashboardStats
+                totalTips={stats.totalTips}
+                totalPlays={stats.totalPlays}
                 supporterCount={stats.supporterCount}
                 isLoading={isLoading}
             />
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-                <div className="lg:col-span-2 h-full">
+                <div className="lg:col-span-2 space-y-6">
                     <TipsChart data={chartData} isLoading={isLoading} />
+
+                    {userProfile?.walletAddress && (
+                        <div className="bg-navy-900 rounded-xl p-6 border border-navy-800">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold text-white">My Goals</h2>
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => setIsCreateGoalOpen(true)}
+                                >
+                                    + Create Goal
+                                </Button>
+                            </div>
+                            <GoalList
+                                artistId={userProfile.walletAddress} // Assuming walletAddress is used as artist ID for now, need to verify
+                                onTip={() => { }}
+                                isOwner={true}
+                                refreshKey={refreshGoals}
+                            />
+                        </div>
+                    )}
                 </div>
-                <div className="lg:col-span-1 h-full">
+                <div className="lg:col-span-1 h-full space-y-6">
                     <TopTracks tracks={topTracks} isLoading={isLoading} />
                 </div>
             </div>
@@ -99,6 +125,20 @@ const Dashboard: React.FC = () => {
             <RecentTips tips={recentTips} tracks={topTracks} isLoading={isLoading} />
 
             <ProfileSection profile={userProfile} isLoading={isLoading} />
+
+            <CreateGoalModal
+                isOpen={isCreateGoalOpen}
+                onClose={() => setIsCreateGoalOpen(false)}
+                onSuccess={() => {
+                    // Refresh goals list - logically GoalList should fetch on mount or we trigger a refetch
+                    // For now, let's just close the modal. GoalList handles its own fetching.
+                    // Ideally we pass a refresh trigger to GoalList.
+                    setIsCreateGoalOpen(false);
+                    // Force refresh or similar if needed. 
+                    // To do this properly, we might need a refresh key or signal.
+                    setRefreshGoals(prev => prev + 1);
+                }}
+            />
         </div>
     );
 };

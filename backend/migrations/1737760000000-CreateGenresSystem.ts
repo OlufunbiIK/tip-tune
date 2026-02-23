@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
 /**
  * Migration: Create Genre Management System
@@ -88,16 +88,15 @@ export class CreateGenresSystem1737760000000 implements MigrationInterface {
       }),
     );
 
-    // Create foreign key for parent genre
-    await queryRunner.createForeignKey(
-      'genres',
-      new TableForeignKey({
-        columnNames: ['parentGenreId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'genres',
-        onDelete: 'SET NULL',
-      }),
-    );
+    // Create foreign key for parent genre (skip if exists)
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "genres" ADD CONSTRAINT "FK_992a488ca7d8a10327741ead1de" 
+        FOREIGN KEY ("parentGenreId") REFERENCES "genres"("id") ON DELETE SET NULL;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
     // Create track_genres junction table
     await queryRunner.createTable(
@@ -151,26 +150,24 @@ export class CreateGenresSystem1737760000000 implements MigrationInterface {
       }),
     );
 
-    // Create foreign keys for track_genres
-    await queryRunner.createForeignKey(
-      'track_genres',
-      new TableForeignKey({
-        columnNames: ['trackId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'tracks',
-        onDelete: 'CASCADE',
-      }),
-    );
+    // Create foreign keys for track_genres (skip if exists)
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "track_genres" ADD CONSTRAINT "FK_track_genres_trackId" 
+        FOREIGN KEY ("trackId") REFERENCES "tracks"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
-    await queryRunner.createForeignKey(
-      'track_genres',
-      new TableForeignKey({
-        columnNames: ['genreId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'genres',
-        onDelete: 'CASCADE',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "track_genres" ADD CONSTRAINT "FK_track_genres_genreId" 
+        FOREIGN KEY ("genreId") REFERENCES "genres"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

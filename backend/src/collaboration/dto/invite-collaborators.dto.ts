@@ -1,5 +1,16 @@
-import { Type } from 'class-transformer';
-import { ValidateNested, ArrayMinSize, IsUUID } from 'class-validator';
+import { Type } from "class-transformer";
+import {
+  ValidateNested,
+  ArrayMinSize,
+  IsUUID,
+  IsEnum,
+  IsNumber,
+  Min,
+  Max,
+  IsOptional,
+  IsString,
+} from "class-validator";
+import { CollaborationRole } from "../entities/collaboration.entity";
 
 class CollaboratorInvite {
   @IsUUID()

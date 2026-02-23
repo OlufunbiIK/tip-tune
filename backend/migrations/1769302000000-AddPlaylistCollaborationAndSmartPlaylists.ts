@@ -2,8 +2,6 @@ import {
   MigrationInterface,
   QueryRunner,
   Table,
-  TableForeignKey,
-  TableIndex,
 } from 'typeorm';
 
 export class AddPlaylistCollaborationAndSmartPlaylists1769302000000
@@ -216,41 +214,33 @@ export class AddPlaylistCollaborationAndSmartPlaylists1769302000000
       true,
     );
 
-    await queryRunner.createIndex(
-      'playlist_collaborators',
-      new TableIndex({
-        name: 'IDX_playlist_collaborators_playlist_status',
-        columnNames: ['playlistId', 'status'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_playlist_collaborators_playlist_status"
+      ON "playlist_collaborators" ("playlistId", "status")
+    `);
 
-    await queryRunner.createIndex(
-      'playlist_collaborators',
-      new TableIndex({
-        name: 'IDX_playlist_collaborators_user',
-        columnNames: ['userId'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_playlist_collaborators_user"
+      ON "playlist_collaborators" ("userId")
+    `);
 
-    await queryRunner.createForeignKey(
-      'playlist_collaborators',
-      new TableForeignKey({
-        columnNames: ['playlistId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'playlists',
-        onDelete: 'CASCADE',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "playlist_collaborators" ADD CONSTRAINT "FK_playlist_collaborators_playlistId"
+        FOREIGN KEY ("playlistId") REFERENCES "playlists"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
-    await queryRunner.createForeignKey(
-      'playlist_collaborators',
-      new TableForeignKey({
-        columnNames: ['userId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "playlist_collaborators" ADD CONSTRAINT "FK_playlist_collaborators_userId"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
     await queryRunner.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS "UQ_playlist_collaborators_owner"
@@ -301,23 +291,19 @@ export class AddPlaylistCollaborationAndSmartPlaylists1769302000000
       true,
     );
 
-    await queryRunner.createIndex(
-      'smart_playlists',
-      new TableIndex({
-        name: 'IDX_smart_playlists_playlist',
-        columnNames: ['playlistId'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_smart_playlists_playlist"
+      ON "smart_playlists" ("playlistId")
+    `);
 
-    await queryRunner.createForeignKey(
-      'smart_playlists',
-      new TableForeignKey({
-        columnNames: ['playlistId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'playlists',
-        onDelete: 'CASCADE',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "smart_playlists" ADD CONSTRAINT "FK_smart_playlists_playlistId"
+        FOREIGN KEY ("playlistId") REFERENCES "playlists"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
     await queryRunner.createTable(
       new Table({
@@ -376,51 +362,42 @@ export class AddPlaylistCollaborationAndSmartPlaylists1769302000000
       true,
     );
 
-    await queryRunner.createIndex(
-      'playlist_change_requests',
-      new TableIndex({
-        name: 'IDX_playlist_change_requests_playlist_status',
-        columnNames: ['playlistId', 'status'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_playlist_change_requests_playlist_status"
+      ON "playlist_change_requests" ("playlistId", "status")
+    `);
 
-    await queryRunner.createIndex(
-      'playlist_change_requests',
-      new TableIndex({
-        name: 'IDX_playlist_change_requests_requested_by',
-        columnNames: ['requested_by_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_playlist_change_requests_requested_by"
+      ON "playlist_change_requests" ("requested_by_id")
+    `);
 
-    await queryRunner.createForeignKey(
-      'playlist_change_requests',
-      new TableForeignKey({
-        columnNames: ['playlistId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'playlists',
-        onDelete: 'CASCADE',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "playlist_change_requests" ADD CONSTRAINT "FK_playlist_change_requests_playlistId"
+        FOREIGN KEY ("playlistId") REFERENCES "playlists"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
-    await queryRunner.createForeignKey(
-      'playlist_change_requests',
-      new TableForeignKey({
-        columnNames: ['requested_by_id'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "playlist_change_requests" ADD CONSTRAINT "FK_playlist_change_requests_requested_by_id"
+        FOREIGN KEY ("requested_by_id") REFERENCES "users"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
-    await queryRunner.createForeignKey(
-      'playlist_change_requests',
-      new TableForeignKey({
-        columnNames: ['reviewed_by_id'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'SET NULL',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "playlist_change_requests" ADD CONSTRAINT "FK_playlist_change_requests_reviewed_by_id"
+        FOREIGN KEY ("reviewed_by_id") REFERENCES "users"("id") ON DELETE SET NULL;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
 
     await queryRunner.query(`
       INSERT INTO "playlist_collaborators" ("playlistId", "userId", "role", "status", "invited_at", "accepted_at")

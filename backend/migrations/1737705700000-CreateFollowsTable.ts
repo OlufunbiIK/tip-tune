@@ -13,7 +13,11 @@ export class CreateFollowsTable1737705700000 implements MigrationInterface {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
     await queryRunner.query(`
-      CREATE TYPE "follows_followingtype_enum" AS ENUM ('artist', 'user')
+      DO $$ BEGIN
+        CREATE TYPE "follows_followingtype_enum" AS ENUM ('artist', 'user');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
     `);
 
     await queryRunner.createTable(

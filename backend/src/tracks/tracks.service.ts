@@ -9,6 +9,7 @@ import { ActivitiesService } from '../activities/activities.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TrackUploadedEvent } from './events/track-uploaded.event';
 import { TrackPlayedEvent } from './events/track-played.event';
+import { LicensingService } from "@/track-listening-right-management/licensing.service";
 
 interface PaginatedResult<T> {
   data: T[];
@@ -29,9 +30,13 @@ export class TracksService {
     @Inject(forwardRef(() => ActivitiesService))
     private activitiesService: ActivitiesService,
     private eventEmitter: EventEmitter2,
-  ) { }
+    private licensingService: LicensingService,
+  ) {}
 
-  async create(createTrackDto: CreateTrackDto, file?: Express.Multer.File): Promise<Track> {
+  async create(
+    createTrackDto: CreateTrackDto,
+    file?: Express.Multer.File,
+  ): Promise<Track> {
     try {
       let audioUrl = createTrackDto.audioUrl;
       let filename: string;
@@ -43,11 +48,15 @@ export class TracksService {
       if (file) {
         // Save file first
         const fileResult = await this.storageService.saveFile(file);
-        const fileInfo = await this.storageService.getFileInfo(fileResult.filename);
+        const fileInfo = await this.storageService.getFileInfo(
+          fileResult.filename,
+        );
 
         filename = fileResult.filename;
         url = fileResult.url;
-        streamingUrl = await this.storageService.getStreamingUrl(fileResult.filename);
+        streamingUrl = await this.storageService.getStreamingUrl(
+          fileResult.filename,
+        );
         fileSize = BigInt(fileInfo.size);
         mimeType = fileInfo.mimeType;
         audioUrl = url;
@@ -67,9 +76,16 @@ export class TracksService {
       const savedTrack = await this.tracksRepository.save(track);
       this.logger.log(`Track created successfully: ${savedTrack.id}`);
 
+      try {
+        await this.licensingService.assignDefaultLicense(savedTrack.id);
+        this.logger.log(`Default license assigned to track: ${savedTrack.id}`);
+      } catch (error) {
+        this.logger.warn(`Failed to assign default license: ${error.message}`);
+      }
+
       if (savedTrack.artistId) {
         this.eventEmitter.emit(
-          'track.uploaded',
+          "track.uploaded",
           new TrackUploadedEvent(savedTrack.id, savedTrack.artistId),
         );
       }
@@ -88,7 +104,9 @@ export class TracksService {
           );
         } catch (error) {
           // Log but don't fail track creation if activity tracking fails
-          this.logger.warn(`Failed to track activity for new track: ${error.message}`);
+          this.logger.warn(
+            `Failed to track activity for new track: ${error.message}`,
+          );
         }
       }
 
@@ -99,36 +117,46 @@ export class TracksService {
     }
   }
 
-  // After create method, actually let's put it before return savedTrack
-  // Re-writing the chunk to include the end of create method
-
-
   async findAll(filter: TrackFilterDto): Promise<PaginatedResult<Track>> {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'DESC', ...filters } = filter;
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "DESC",
+      ...filters
+    } = filter;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.tracksRepository
-      .createQueryBuilder('track')
-      .leftJoinAndSelect('track.artist', 'artist')
+      .createQueryBuilder("track")
+      .leftJoinAndSelect("track.artist", "artist")
       .orderBy(`track.${sortBy}`, sortOrder)
       .skip(skip)
       .take(limit);
 
     // Apply filters
     if (filters.artistId) {
-      queryBuilder.andWhere('track.artistId = :artistId', { artistId: filters.artistId });
+      queryBuilder.andWhere("track.artistId = :artistId", {
+        artistId: filters.artistId,
+      });
     }
     if (filters.genre) {
-      queryBuilder.andWhere('track.genre = :genre', { genre: filters.genre });
+      queryBuilder.andWhere("track.genre = :genre", { genre: filters.genre });
     }
     if (filters.album) {
-      queryBuilder.andWhere('track.album ILIKE :album', { album: `%${filters.album}%` });
+      queryBuilder.andWhere("track.album ILIKE :album", {
+        album: `%${filters.album}%`,
+      });
     }
     if (filters.isPublic !== undefined) {
-      queryBuilder.andWhere('track.isPublic = :isPublic', { isPublic: filters.isPublic });
+      queryBuilder.andWhere("track.isPublic = :isPublic", {
+        isPublic: filters.isPublic,
+      });
     }
     if (filters.releaseDate) {
-      queryBuilder.andWhere('track.releaseDate = :releaseDate', { releaseDate: filters.releaseDate });
+      queryBuilder.andWhere("track.releaseDate = :releaseDate", {
+        releaseDate: filters.releaseDate,
+      });
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -149,7 +177,7 @@ export class TracksService {
   async findOne(id: string): Promise<Track> {
     const track = await this.tracksRepository.findOne({
       where: { id },
-      relations: ['artist'],
+      relations: ["artist", "license"],
     });
 
     if (!track) {
@@ -159,7 +187,10 @@ export class TracksService {
     return track;
   }
 
-  async update(id: string, updateTrackDto: Partial<CreateTrackDto>): Promise<Track> {
+  async update(
+    id: string,
+    updateTrackDto: Partial<CreateTrackDto>,
+  ): Promise<Track> {
     const track = await this.findOne(id);
 
     Object.assign(track, updateTrackDto);
@@ -198,7 +229,7 @@ export class TracksService {
 
     if (updatedTrack.artistId) {
       this.eventEmitter.emit(
-        'track.played',
+        "track.played",
         new TrackPlayedEvent(updatedTrack.id, updatedTrack.artistId, null),
       );
     }
@@ -216,23 +247,37 @@ export class TracksService {
     return updatedTrack;
   }
 
-  async findByArtist(artistId: string, filter: TrackFilterDto): Promise<PaginatedResult<Track>> {
+  async findByArtist(
+    artistId: string,
+    filter: TrackFilterDto,
+  ): Promise<PaginatedResult<Track>> {
     return this.findAll({ ...filter, artistId });
   }
 
-  async findByGenre(genre: string, filter: TrackFilterDto): Promise<PaginatedResult<Track>> {
+  async findByGenre(
+    genre: string,
+    filter: TrackFilterDto,
+  ): Promise<PaginatedResult<Track>> {
     return this.findAll({ ...filter, genre });
   }
 
-  async search(query: string, filter: TrackFilterDto): Promise<PaginatedResult<Track>> {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'DESC' } = filter;
+  async search(
+    query: string,
+    filter: TrackFilterDto,
+  ): Promise<PaginatedResult<Track>> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "DESC",
+    } = filter;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.tracksRepository
-      .createQueryBuilder('track')
-      .leftJoinAndSelect('track.artist', 'artist')
-      .where('track.title ILIKE :query', { query: `%${query}%` })
-      .orWhere('track.album ILIKE :query', { query: `%${query}%` })
+      .createQueryBuilder("track")
+      .leftJoinAndSelect("track.artist", "artist")
+      .where("track.title ILIKE :query", { query: `%${query}%` })
+      .orWhere("track.album ILIKE :query", { query: `%${query}%` })
       .orderBy(`track.${sortBy}`, sortOrder)
       .skip(skip)
       .take(limit);

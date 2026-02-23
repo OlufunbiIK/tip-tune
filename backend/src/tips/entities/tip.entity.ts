@@ -11,6 +11,7 @@ import {
 } from "typeorm";
 import { Artist } from "../../artists/entities/artist.entity";
 import { Track } from "../../tracks/entities/track.entity";
+import { TipGoal } from "../../goals/entities/tip-goal.entity";
 
 export enum TipStatus {
   PENDING = "pending",
@@ -25,9 +26,10 @@ export enum TipType {
 }
 
 @Entity("tips")
-@Unique(["stellarTxHash"]) // Prevent duplicate transactions
+@Unique(["stellarTxHash"])
 @Index(["artistId", "status"])
 @Index(["trackId", "status"])
+@Index(["goalId", "status"])
 @Index(["createdAt"])
 export class Tip {
   @PrimaryGeneratedColumn("uuid")
@@ -38,6 +40,9 @@ export class Tip {
 
   @Column({ type: "uuid", nullable: true })
   trackId?: string;
+
+  @Column({ type: "uuid", nullable: true })
+  goalId?: string;
 
   @Column({ length: 64, unique: true })
   stellarTxHash: string;
@@ -99,6 +104,12 @@ export class Tip {
   @Column({ type: "text", nullable: true })
   reversalReason?: string;
 
+  @Column({ length: 64, nullable: true })
+  distributionHash?: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  distributedAt?: Date;
+
   @Column({ type: "timestamp", nullable: true })
   stellarTimestamp?: Date;
 
@@ -113,6 +124,9 @@ export class Tip {
 
   @Column({ type: "boolean", default: false })
   isAnonymous: boolean;
+
+  @Column({ nullable: true })
+  asset: string;
 
   @Column({ type: "boolean", default: false })
   isPublic: boolean;
@@ -133,4 +147,8 @@ export class Tip {
   @ManyToOne(() => Track, (track) => track.tips, { onDelete: "SET NULL" })
   @JoinColumn({ name: "trackId" })
   track?: Track;
+
+  @ManyToOne(() => TipGoal, (goal) => goal.tips, { onDelete: "SET NULL" })
+  @JoinColumn({ name: "goalId" })
+  goal?: TipGoal;
 }

@@ -9,14 +9,14 @@ import {
   Query,
   UseGuards,
   Request,
-} from '@nestjs/common';
-import { ScheduledReleasesService } from './scheduled-releases.service';
-import { PreSavesService } from './presaves.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CreateScheduledReleaseDto } from './dto/create-scheduled-release.dto';
-import { UpdateScheduledReleaseDto } from './dto/update-scheduled-release.dto';
+} from "@nestjs/common";
+import { ScheduledReleasesService } from "./scheduled-releases.service";
+import { PreSavesService } from "./presaves.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CreateScheduledReleaseDto } from "./dto/create-scheduled-release.dto";
+import { UpdateScheduledReleaseDto } from "./dto/update-scheduled-release.dto";
 
-@Controller('scheduled-releases')
+@Controller("scheduled-releases")
 export class ScheduledReleasesController {
   constructor(
     private readonly scheduledReleasesService: ScheduledReleasesService,
@@ -34,28 +34,26 @@ export class ScheduledReleasesController {
   }
 
   @Get()
-  async getUpcoming(@Query('limit') limit?: number) {
+  async getUpcoming(@Query("limit") limit?: number) {
     return this.scheduledReleasesService.getUpcomingReleases(
       limit ? parseInt(limit as any) : 20,
     );
   }
 
-  @Get('artist/:artistId')
-  async getArtistReleases(@Param('artistId') artistId: string) {
+  @Get("artist/:artistId")
+  async getArtistReleases(@Param("artistId") artistId: string) {
     return this.scheduledReleasesService.getArtistScheduledReleases(artistId);
   }
 
-  @Get('track/:trackId')
-  async getByTrackId(@Param('trackId') trackId: string) {
+  @Get("track/:trackId")
+  async getByTrackId(@Param("trackId") trackId: string) {
     return this.scheduledReleasesService.getScheduledReleaseByTrackId(trackId);
   }
 
-  @Get('track/:trackId/countdown')
-  async getCountdown(@Param('trackId') trackId: string) {
+  @Get("track/:trackId/countdown")
+  async getCountdown(@Param("trackId") trackId: string) {
     const release =
-      await this.scheduledReleasesService.getScheduledReleaseByTrackId(
-        trackId,
-      );
+      await this.scheduledReleasesService.getScheduledReleaseByTrackId(trackId);
 
     if (!release) {
       return { countdown: null };
@@ -89,19 +87,22 @@ export class ScheduledReleasesController {
     };
   }
 
-  @Get('track/:trackId/analytics')
-  async getAnalytics(@Param('trackId') trackId: string) {
+  @Get("track/:trackId/analytics")
+  async getAnalytics(@Param("trackId") trackId: string) {
     return this.scheduledReleasesService.getAnalytics(trackId);
   }
 
-  @Get(':id')
-  async getById(@Param('id') id: string) {
+  @Get(":id")
+  async getById(@Param("id") id: string) {
     return this.scheduledReleasesService.getScheduledRelease(id);
   }
 
-  @Put(':id')
+  @Put(":id")
   @UseGuards(JwtAuthGuard)
-  async update(@Param('id') id: string, @Body() dto: UpdateScheduledReleaseDto) {
+  async update(
+    @Param("id") id: string,
+    @Body() dto: UpdateScheduledReleaseDto,
+  ) {
     return this.scheduledReleasesService.updateScheduledRelease(
       id,
       dto.releaseDate,
@@ -109,41 +110,41 @@ export class ScheduledReleasesController {
     );
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @UseGuards(JwtAuthGuard)
-  async cancel(@Param('id') id: string) {
+  async cancel(@Param("id") id: string) {
     await this.scheduledReleasesService.cancelScheduledRelease(id);
-    return { message: 'Scheduled release cancelled successfully' };
+    return { message: "Scheduled release cancelled successfully" };
   }
 
   // Pre-save endpoints
-  @Post('track/:trackId/presave')
+  @Post("track/:trackId/presave")
   @UseGuards(JwtAuthGuard)
-  async createPreSave(@Param('trackId') trackId: string, @Request() req) {
+  async createPreSave(@Param("trackId") trackId: string, @Request() req) {
     return this.preSavesService.createPreSave(req.user.id, trackId);
   }
 
-  @Delete('track/:trackId/presave')
+  @Delete("track/:trackId/presave")
   @UseGuards(JwtAuthGuard)
-  async removePreSave(@Param('trackId') trackId: string, @Request() req) {
+  async removePreSave(@Param("trackId") trackId: string, @Request() req) {
     await this.preSavesService.removePreSave(req.user.id, trackId);
-    return { message: 'Pre-save removed successfully' };
+    return { message: "Pre-save removed successfully" };
   }
 
-  @Get('track/:trackId/presaves')
-  async getTrackPreSaves(@Param('trackId') trackId: string) {
+  @Get("track/:trackId/presaves")
+  async getTrackPreSaves(@Param("trackId") trackId: string) {
     return this.preSavesService.getTrackPreSaves(trackId);
   }
 
-  @Get('user/presaves')
+  @Get("user/presaves")
   @UseGuards(JwtAuthGuard)
   async getUserPreSaves(@Request() req) {
     return this.preSavesService.getUserPreSaves(req.user.id);
   }
 
-  @Get('track/:trackId/has-presaved')
+  @Get("track/:trackId/has-presaved")
   @UseGuards(JwtAuthGuard)
-  async hasPreSaved(@Param('trackId') trackId: string, @Request() req) {
+  async hasPreSaved(@Param("trackId") trackId: string, @Request() req) {
     const hasPreSaved = await this.preSavesService.hasPreSaved(
       req.user.id,
       trackId,

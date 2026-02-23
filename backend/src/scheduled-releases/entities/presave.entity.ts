@@ -7,32 +7,32 @@ import {
   CreateDateColumn,
   Index,
   Unique,
-} from 'typeorm';
-import { User } from '../users/user.entity';
-import { Track } from '../tracks/track.entity';
+} from "typeorm";
+import { User } from "../../users/entities/user.entity";
+import { Track } from "../../tracks/entities/track.entity";
 
-@Entity('presaves')
-@Unique(['userId', 'trackId'])
-@Index(['trackId', 'notified'])
+@Entity("presaves")
+@Unique(["userId", "trackId"])
+@Index(["trackId", "notified"])
 export class PreSave {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   userId: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "userId" })
   user: User;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   trackId: string;
 
-  @ManyToOne(() => Track, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'trackId' })
+  @ManyToOne(() => Track, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "trackId" })
   track: Track;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: "boolean", default: false })
   notified: boolean;
 
   @CreateDateColumn()

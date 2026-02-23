@@ -12,10 +12,10 @@ const mockUserProfile: UserProfile = {
 };
 
 const mockTracks: Track[] = [
-  { id: 'track-1', title: 'Neon Dreams', coverArt: 'https://picsum.photos/seed/track1/100/100', plays: 120543, tips: 1500.50 },
-  { id: 'track-2', title: 'City Lights', coverArt: 'https://picsum.photos/seed/track2/100/100', plays: 98765, tips: 1250.75 },
-  { id: 'track-3', title: 'Sunset Groove', coverArt: 'https://picsum.photos/seed/track3/100/100', plays: 76543, tips: 980.00 },
-  { id: 'track-4', title: 'Midnight Drive', coverArt: 'https://picsum.photos/seed/track4/100/100', plays: 54321, tips: 750.25 },
+  { id: 'track-1', title: 'Neon Dreams', coverArt: 'https://picsum.photos/seed/track1/100/100', plays: 120543, tips: 1500.50, artist: { id: 'artist-1', artistName: 'DJ Melodica' } },
+  { id: 'track-2', title: 'City Lights', coverArt: 'https://picsum.photos/seed/track2/100/100', plays: 98765, tips: 1250.75, artist: { id: 'artist-2', artistName: 'City Beats' } },
+  { id: 'track-3', title: 'Sunset Groove', coverArt: 'https://picsum.photos/seed/track3/100/100', plays: 76543, tips: 980.00, artist: { id: 'artist-3', artistName: 'Sunset Collective' } },
+  { id: 'track-4', title: 'Midnight Drive', coverArt: 'https://picsum.photos/seed/track4/100/100', plays: 54321, tips: 750.25, artist: { id: 'artist-4', artistName: 'Midnight Riders' } },
 ];
 
 const mockRecentTips: Tip[] = Array.from({ length: 25 }, (_, i) => ({

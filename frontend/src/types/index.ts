@@ -26,7 +26,7 @@ export interface Track {
   plays: number;
   artistId?: string;
   tips: number;
-  artist?: ArtistSummary;
+  artist: ArtistSummary;
   filename?: string;
   url?: string;
   streamingUrl?: string;
@@ -57,6 +57,16 @@ export interface Tip {
   message: string;
   timestamp: string; // ISO 8601 string from API
   trackId?: string; // UUID string matching Track.id
+}
+
+/** Extended tip for history page: amount in asset, USD, track, Stellar link */
+export interface TipHistoryItem extends Tip {
+  stellarTxHash?: string;
+  assetCode?: string;
+  usdAmount?: number;
+  trackTitle?: string;
+  /** For "Sent" tab: artist name; for "Received" tab: tipper is already shown */
+  artistName?: string;
 }
 
 // User types
@@ -121,7 +131,7 @@ export interface UserBadge {
 
 export interface ArtistSummary {
   id: string;
-  artistName?: string;
+  artistName: string;
 }
 
 export interface PlaylistTrack {

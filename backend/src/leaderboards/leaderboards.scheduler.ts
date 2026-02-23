@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { LeaderboardsService, LeaderboardType } from './leaderboards.service';
-import { Timeframe } from './ranking.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { LeaderboardsService, LeaderboardType } from "./leaderboards.service";
+import { Timeframe } from "./ranking.service";
 
 /**
  * Scheduled tasks for updating leaderboards
@@ -18,7 +18,7 @@ export class LeaderboardsScheduler {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async refreshAllTimeLeaderboards() {
-    this.logger.log('Refreshing all-time leaderboards');
+    this.logger.log("Refreshing all-time leaderboards");
     try {
       const types = [
         LeaderboardType.ARTIST_MOST_TIPPED,
@@ -36,18 +36,18 @@ export class LeaderboardsScheduler {
           offset: 0,
         });
       }
-      this.logger.log('All-time leaderboards refreshed successfully');
+      this.logger.log("All-time leaderboards refreshed successfully");
     } catch (error) {
-      this.logger.error('Error refreshing all-time leaderboards', error);
+      this.logger.error("Error refreshing all-time leaderboards", error);
     }
   }
 
   /**
    * Refresh weekly leaderboards every 15 minutes
    */
-  @Cron(CronExpression.EVERY_15_MINUTES)
+  @Cron("0 */15 * * * *")
   async refreshWeeklyLeaderboards() {
-    this.logger.log('Refreshing weekly leaderboards');
+    this.logger.log("Refreshing weekly leaderboards");
     try {
       const types = [
         LeaderboardType.ARTIST_MOST_TIPPED,
@@ -62,9 +62,9 @@ export class LeaderboardsScheduler {
           offset: 0,
         });
       }
-      this.logger.log('Weekly leaderboards refreshed successfully');
+      this.logger.log("Weekly leaderboards refreshed successfully");
     } catch (error) {
-      this.logger.error('Error refreshing weekly leaderboards', error);
+      this.logger.error("Error refreshing weekly leaderboards", error);
     }
   }
 
@@ -73,7 +73,7 @@ export class LeaderboardsScheduler {
    */
   @Cron(CronExpression.EVERY_30_MINUTES)
   async refreshMonthlyLeaderboards() {
-    this.logger.log('Refreshing monthly leaderboards');
+    this.logger.log("Refreshing monthly leaderboards");
     try {
       const types = [
         LeaderboardType.ARTIST_MOST_TIPPED,
@@ -89,9 +89,9 @@ export class LeaderboardsScheduler {
           offset: 0,
         });
       }
-      this.logger.log('Monthly leaderboards refreshed successfully');
+      this.logger.log("Monthly leaderboards refreshed successfully");
     } catch (error) {
-      this.logger.error('Error refreshing monthly leaderboards', error);
+      this.logger.error("Error refreshing monthly leaderboards", error);
     }
   }
 
@@ -100,16 +100,19 @@ export class LeaderboardsScheduler {
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async refreshTrendingTracks() {
-    this.logger.log('Refreshing trending tracks');
+    this.logger.log("Refreshing trending tracks");
     try {
-      await this.leaderboardsService.getLeaderboard(LeaderboardType.TRACK_TRENDING, {
-        timeframe: Timeframe.ALL_TIME,
-        limit: 100,
-        offset: 0,
-      });
-      this.logger.log('Trending tracks refreshed successfully');
+      await this.leaderboardsService.getLeaderboard(
+        LeaderboardType.TRACK_TRENDING,
+        {
+          timeframe: Timeframe.ALL_TIME,
+          limit: 100,
+          offset: 0,
+        },
+      );
+      this.logger.log("Trending tracks refreshed successfully");
     } catch (error) {
-      this.logger.error('Error refreshing trending tracks', error);
+      this.logger.error("Error refreshing trending tracks", error);
     }
   }
 }

@@ -3,17 +3,22 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Collaboration, ApprovalStatus, CollaborationRole } from './entities/collaboration.entity';
-import { Track } from '../tracks/entities/track.entity';
-import { Artist } from '../artists/entities/artist.entity';
-import { CreateCollaborationDto } from './dto/create-collaboration.dto';
-import { UpdateCollaborationDto } from './dto/update-collaboration.dto';
-import { InviteCollaboratorsDto } from './dto/invite-collaborators.dto';
-import { NotificationService } from '../notifications/notification.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, DataSource } from "typeorm";
+import {
+  Collaboration,
+  ApprovalStatus,
+  CollaborationRole,
+} from "./entities/collaboration.entity";
+import { Track } from "../tracks/entities/track.entity";
+import { Artist } from "../artists/entities/artist.entity";
+import { CreateCollaborationDto } from "./dto/create-collaboration.dto";
+import { UpdateCollaborationDto } from "./dto/update-collaboration.dto";
+import { UpdateApprovalDto } from "./dto/update-approval.dto";
+import { InviteCollaboratorsDto } from "./dto/invite-collaborators.dto";
+import { NotificationsService } from "../notifications/notifications.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
 @Injectable()
 export class CollaborationService {
@@ -25,7 +30,7 @@ export class CollaborationService {
     @InjectRepository(Artist)
     private artistRepo: Repository<Artist>,
     private dataSource: DataSource,
-    private notificationService: NotificationService,
+    private notificationsService: NotificationsService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -41,20 +46,25 @@ export class CollaborationService {
       // Verify track ownership
       const track = await this.trackRepo.findOne({
         where: { id: dto.trackId },
-        relations: ['artist'],
+        relations: ["artist"],
       });
 
       if (!track) {
-        throw new NotFoundException('Track not found');
+        throw new NotFoundException("Track not found");
       }
 
       if (track.artist.userId !== userId) {
-        throw new ForbiddenException('Only track owner can invite collaborators');
+        throw new ForbiddenException(
+          "Only track owner can invite collaborators",
+        );
       }
 
       // Validate total split percentage
       const existingCollabs = await this.collaborationRepo.find({
-        where: { trackId: dto.trackId, approvalStatus: ApprovalStatus.APPROVED },
+        where: {
+          trackId: dto.trackId,
+          approvalStatus: ApprovalStatus.APPROVED,
+        },
       });
 
       const existingSplit = existingCollabs.reduce(
@@ -96,7 +106,7 @@ export class CollaborationService {
 
         if (existing) {
           throw new BadRequestException(
-            `Artist ${artist.name} is already a collaborator`,
+            `Artist ${artist.artistName} is already a collaborator`,
           );
         }
 
@@ -113,11 +123,11 @@ export class CollaborationService {
         collaborations.push(saved);
 
         // Send notification
-        await this.notificationService.sendCollaborationInvite({
+        await this.notificationsService.sendCollaborationInvite({
           artistId: artist.id,
           trackId: track.id,
           trackTitle: track.title,
-          invitedBy: track.artist.name,
+          invitedBy: track.artist.artistName,
           role: collabDto.role,
           splitPercentage: collabDto.splitPercentage,
           message: collabDto.invitationMessage,
@@ -126,7 +136,7 @@ export class CollaborationService {
 
       await queryRunner.commitTransaction();
 
-      this.eventEmitter.emit('collaboration.invited', {
+      this.eventEmitter.emit("collaboration.invited", {
         trackId: dto.trackId,
         collaborations,
       });
@@ -147,19 +157,21 @@ export class CollaborationService {
   ): Promise<Collaboration> {
     const collaboration = await this.collaborationRepo.findOne({
       where: { id: collaborationId },
-      relations: ['artist', 'track', 'track.artist'],
+      relations: ["artist", "track", "track.artist"],
     });
 
     if (!collaboration) {
-      throw new NotFoundException('Collaboration not found');
+      throw new NotFoundException("Collaboration not found");
     }
 
     if (collaboration.artist.userId !== userId) {
-      throw new ForbiddenException('Not authorized to respond to this invitation');
+      throw new ForbiddenException(
+        "Not authorized to respond to this invitation",
+      );
     }
 
     if (collaboration.approvalStatus !== ApprovalStatus.PENDING) {
-      throw new BadRequestException('Invitation already responded to');
+      throw new BadRequestException("Invitation already responded to");
     }
 
     collaboration.approvalStatus = dto.approvalStatus;
@@ -169,15 +181,15 @@ export class CollaborationService {
     const updated = await this.collaborationRepo.save(collaboration);
 
     // Notify track owner
-    await this.notificationService.sendCollaborationResponse({
+    await this.notificationsService.sendCollaborationResponse({
       artistId: collaboration.track.artist.id,
-      collaboratorName: collaboration.artist.name,
+      collaboratorName: collaboration.artist.artistName,
       trackTitle: collaboration.track.title,
       status: dto.approvalStatus,
       reason: dto.rejectionReason,
     });
 
-    this.eventEmitter.emit('collaboration.responded', {
+    this.eventEmitter.emit("collaboration.responded", {
       collaboration: updated,
       status: dto.approvalStatus,
     });
@@ -185,25 +197,36 @@ export class CollaborationService {
     return updated;
   }
 
+  async updateCollaborationStatus(
+    collaborationId: string,
+    userId: string,
+    dto: UpdateApprovalDto,
+  ): Promise<Collaboration> {
+    return this.respondToInvitation(userId, collaborationId, {
+      approvalStatus: dto.status,
+      rejectionReason: dto.rejectionReason,
+    });
+  }
+
   async getTrackCollaborators(trackId: string): Promise<Collaboration[]> {
     return this.collaborationRepo.find({
       where: { trackId },
-      relations: ['artist'],
-      order: { createdAt: 'ASC' },
+      relations: ["artist"],
+      order: { createdAt: "ASC" },
     });
   }
 
   async getArtistCollaborations(artistId: string): Promise<Collaboration[]> {
     return this.collaborationRepo.find({
       where: { artistId },
-      relations: ['track', 'track.artist'],
-      order: { createdAt: 'DESC' },
+      relations: ["track", "track.artist"],
+      order: { createdAt: "DESC" },
     });
   }
 
   async getPendingInvitations(userId: string): Promise<Collaboration[]> {
     const artist = await this.artistRepo.findOne({ where: { userId } });
-    
+
     if (!artist) {
       return [];
     }
@@ -213,8 +236,8 @@ export class CollaborationService {
         artistId: artist.id,
         approvalStatus: ApprovalStatus.PENDING,
       },
-      relations: ['track', 'track.artist'],
-      order: { createdAt: 'DESC' },
+      relations: ["track", "track.artist"],
+      order: { createdAt: "DESC" },
     });
   }
 
@@ -224,21 +247,21 @@ export class CollaborationService {
   ): Promise<void> {
     const collaboration = await this.collaborationRepo.findOne({
       where: { id: collaborationId },
-      relations: ['track', 'track.artist'],
+      relations: ["track", "track.artist"],
     });
 
     if (!collaboration) {
-      throw new NotFoundException('Collaboration not found');
+      throw new NotFoundException("Collaboration not found");
     }
 
     // Only track owner can remove collaborators
     if (collaboration.track.artist.userId !== userId) {
-      throw new ForbiddenException('Only track owner can remove collaborators');
+      throw new ForbiddenException("Only track owner can remove collaborators");
     }
 
     await this.collaborationRepo.remove(collaboration);
 
-    this.eventEmitter.emit('collaboration.removed', {
+    this.eventEmitter.emit("collaboration.removed", {
       collaborationId,
       trackId: collaboration.trackId,
     });
@@ -270,12 +293,15 @@ export class CollaborationService {
 
     return {
       total: collaborations.length,
-      approved: collaborations.filter((c) => c.approvalStatus === ApprovalStatus.APPROVED)
-        .length,
-      pending: collaborations.filter((c) => c.approvalStatus === ApprovalStatus.PENDING)
-        .length,
-      rejected: collaborations.filter((c) => c.approvalStatus === ApprovalStatus.REJECTED)
-        .length,
+      approved: collaborations.filter(
+        (c) => c.approvalStatus === ApprovalStatus.APPROVED,
+      ).length,
+      pending: collaborations.filter(
+        (c) => c.approvalStatus === ApprovalStatus.PENDING,
+      ).length,
+      rejected: collaborations.filter(
+        (c) => c.approvalStatus === ApprovalStatus.REJECTED,
+      ).length,
       splitAllocated: collaborations
         .filter((c) => c.approvalStatus === ApprovalStatus.APPROVED)
         .reduce((sum, c) => sum + Number(c.splitPercentage), 0),

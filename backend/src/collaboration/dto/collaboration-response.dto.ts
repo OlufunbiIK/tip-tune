@@ -1,3 +1,8 @@
+import {
+  CollaborationRole,
+  ApprovalStatus,
+} from "../entities/collaboration.entity";
+
 export class CollaborationResponseDto {
   id: string;
   trackId: string;

@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table, TableIndex, TableForeignKey } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
 /**
  * Migration: Create activities table for activity feed feature
@@ -76,16 +76,15 @@ export class CreateActivitiesTable1769225274988 implements MigrationInterface {
       }),
     );
 
-    // Create foreign key to users table
-    await queryRunner.createForeignKey(
-      'activities',
-      new TableForeignKey({
-        columnNames: ['userId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-      }),
-    );
+    // Create foreign key to users table (skip if exists)
+    await queryRunner.query(`
+      DO $$ BEGIN
+        ALTER TABLE "activities" ADD CONSTRAINT "FK_5a2cfe6f705df945b20c1b22c71" 
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
+    `);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

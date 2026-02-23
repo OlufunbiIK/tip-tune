@@ -7,10 +7,14 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  OneToOne,
 } from "typeorm";
 import { Artist } from "../../artists/entities/artist.entity";
 import { Tip } from "../../tips/entities/tip.entity";
 import { TrackGenre } from "../../genres/entities/track-genre.entity";
+import { Collaboration } from "../../collaboration/entities/collaboration.entity";
+import { TrackLicense } from "@/track-listening-right-management/track-license.entity";
+
 
 @Entity("tracks")
 export class Track {
@@ -80,6 +84,12 @@ export class Track {
 
   @OneToMany(() => TrackGenre, (trackGenre) => trackGenre.track)
   trackGenres: TrackGenre[];
+
+  @OneToMany(() => Collaboration, (collab) => collab.track)
+  collaborations: Collaboration[];
+
+  @OneToOne(() => TrackLicense, (license) => license.track)
+  license: TrackLicense;
 
   @CreateDateColumn()
   createdAt: Date;

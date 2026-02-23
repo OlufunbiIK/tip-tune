@@ -61,6 +61,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
         if (connected) {
           const { address } = await getAddress();
           const publicKey = address;
+          
+          // Validate publicKey before proceeding
+          if (!publicKey || publicKey.trim() === '') {
+            console.debug('Connected but no valid address returned');
+            return;
+          }
+          
           let network: Network = defaultNetwork;
 
           try {
@@ -100,6 +107,12 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
 
   // Fetch balance for a given address and network
   const fetchBalance = useCallback(async (publicKey: string, network: Network) => {
+    // Validate publicKey before making request
+    if (!publicKey || publicKey.trim() === '') {
+      console.debug('Cannot fetch balance: no valid publicKey');
+      return;
+    }
+
     try {
       const server = getServer(network);
       const account = await server.loadAccount(publicKey);

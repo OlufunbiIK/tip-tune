@@ -11,6 +11,11 @@ export class CreateTipDto {
   @IsUUID()
   trackId?: string;
 
+  @ApiPropertyOptional({ description: 'Goal ID (optional)', example: '550e8400-e29b-41d4-a716-446655440003' })
+  @IsOptional()
+  @IsUUID()
+  goalId?: string;
+
   @ApiProperty({ description: 'Stellar transaction hash', example: 'abc123def456...' })
   @IsString()
   stellarTxHash: string;

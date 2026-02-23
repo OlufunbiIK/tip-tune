@@ -1,26 +1,29 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThan } from 'typeorm';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
-import { Artist } from '../artists/entities/artist.entity';
-import { Track } from '../tracks/entities/track.entity';
-import { Tip, TipStatus } from '../tips/tips.entity';
-import { RankingService, Timeframe } from './ranking.service';
-import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
-import { LeaderboardEntryDto, LeaderboardResponseDto } from './dto/leaderboard-response.dto';
+import { Injectable, Logger, Inject } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Between, MoreThan } from "typeorm";
+import Redis from "ioredis";
+import { Artist } from "../artists/entities/artist.entity";
+import { Track } from "../tracks/entities/track.entity";
+import { Tip, TipStatus } from "../tips/entities/tip.entity";
+import { RankingService, Timeframe } from "./ranking.service";
+import { LeaderboardQueryDto } from "./dto/leaderboard-query.dto";
+import {
+  LeaderboardEntryDto,
+  LeaderboardResponseDto,
+} from "./dto/leaderboard-response.dto";
+import { REDIS_CLIENT } from "./redis.module";
 
 export enum LeaderboardType {
-  ARTIST_MOST_TIPPED = 'artist-most-tipped',
-  ARTIST_MOST_PLAYED = 'artist-most-played',
-  ARTIST_FASTEST_GROWING = 'artist-fastest-growing',
-  ARTIST_BY_GENRE = 'artist-by-genre',
-  TIPPER_MOST_GENEROUS = 'tipper-most-generous',
-  TIPPER_MOST_ACTIVE = 'tipper-most-active',
-  TIPPER_BIGGEST_SINGLE = 'tipper-biggest-single',
-  TRACK_TRENDING = 'track-trending',
-  TRACK_MOST_TIPPED = 'track-most-tipped',
-  TRACK_MOST_PLAYED = 'track-most-played',
+  ARTIST_MOST_TIPPED = "artist-most-tipped",
+  ARTIST_MOST_PLAYED = "artist-most-played",
+  ARTIST_FASTEST_GROWING = "artist-fastest-growing",
+  ARTIST_BY_GENRE = "artist-by-genre",
+  TIPPER_MOST_GENEROUS = "tipper-most-generous",
+  TIPPER_MOST_ACTIVE = "tipper-most-active",
+  TIPPER_BIGGEST_SINGLE = "tipper-biggest-single",
+  TRACK_TRENDING = "track-trending",
+  TRACK_MOST_TIPPED = "track-most-tipped",
+  TRACK_MOST_PLAYED = "track-most-played",
 }
 
 @Injectable()
@@ -47,7 +50,7 @@ export class LeaderboardsService {
     query: LeaderboardQueryDto,
   ): Promise<LeaderboardResponseDto> {
     const cacheKey = this.getCacheKey(type, query);
-    
+
     // Try to get from cache
     const cached = await this.redis.get(cacheKey);
     if (cached) {
@@ -115,31 +118,36 @@ export class LeaderboardsService {
     );
 
     const queryBuilder = this.artistRepository
-      .createQueryBuilder('artist')
-      .leftJoin('artist.tips', 'tip', 'tip.status = :status', { status: TipStatus.COMPLETED });
+      .createQueryBuilder("artist")
+      .leftJoin("artist.tips", "tip", "tip.status = :status", {
+        status: TipStatus.VERIFIED,
+      });
 
     if (query.timeframe !== Timeframe.ALL_TIME) {
-      queryBuilder.andWhere('tip.createdAt BETWEEN :start AND :end', { start, end });
+      queryBuilder.andWhere("tip.createdAt BETWEEN :start AND :end", {
+        start,
+        end,
+      });
     }
 
     if (query.genre) {
-      queryBuilder.andWhere('artist.genre = :genre', { genre: query.genre });
+      queryBuilder.andWhere("artist.genre = :genre", { genre: query.genre });
     }
 
     const results = await queryBuilder
       .select([
-        'artist.id',
-        'artist.artistName',
-        'artist.profileImage',
-        'artist.genre',
+        "artist.id",
+        "artist.artistName",
+        "artist.profileImage",
+        "artist.genre",
       ])
-      .addSelect('COALESCE(SUM(tip.amount), 0)', 'totalAmount')
-      .addSelect('COUNT(tip.id)', 'tipCount')
-      .groupBy('artist.id')
-      .addGroupBy('artist.artistName')
-      .addGroupBy('artist.profileImage')
-      .addGroupBy('artist.genre')
-      .orderBy('totalAmount', 'DESC')
+      .addSelect("COALESCE(SUM(tip.amount), 0)", "totalAmount")
+      .addSelect("COUNT(tip.id)", "tipCount")
+      .groupBy("artist.id")
+      .addGroupBy("artist.artistName")
+      .addGroupBy("artist.profileImage")
+      .addGroupBy("artist.genre")
+      .orderBy("totalAmount", "DESC")
       .limit(query.limit || 50)
       .offset(query.offset || 0)
       .getRawMany();
@@ -161,23 +169,23 @@ export class LeaderboardsService {
     query: LeaderboardQueryDto,
   ): Promise<LeaderboardEntryDto[]> {
     const queryBuilder = this.artistRepository
-      .createQueryBuilder('artist')
-      .leftJoin('artist.tracks', 'track')
+      .createQueryBuilder("artist")
+      .leftJoin("artist.tracks", "track")
       .select([
-        'artist.id',
-        'artist.artistName',
-        'artist.profileImage',
-        'artist.genre',
+        "artist.id",
+        "artist.artistName",
+        "artist.profileImage",
+        "artist.genre",
       ])
-      .addSelect('SUM(track.plays)', 'totalPlays')
-      .addSelect('COUNT(track.id)', 'trackCount')
-      .groupBy('artist.id')
-      .orderBy('totalPlays', 'DESC')
+      .addSelect("SUM(track.plays)", "totalPlays")
+      .addSelect("COUNT(track.id)", "trackCount")
+      .groupBy("artist.id")
+      .orderBy("totalPlays", "DESC")
       .limit(query.limit || 50)
       .offset(query.offset || 0);
 
     if (query.genre) {
-      queryBuilder.andWhere('artist.genre = :genre', { genre: query.genre });
+      queryBuilder.andWhere("artist.genre = :genre", { genre: query.genre });
     }
 
     const results = await queryBuilder.getRawMany();
@@ -206,30 +214,33 @@ export class LeaderboardsService {
 
     // Get recent tips (last 7 days)
     const recentTips = await this.tipRepository
-      .createQueryBuilder('tip')
-      .select('tip.toArtistId', 'toArtistId')
-      .addSelect('SUM(tip.amount)', 'recentAmount')
-      .where('tip.status = :status', { status: TipStatus.COMPLETED })
-      .andWhere('tip.createdAt >= :recentStart', { recentStart })
-      .groupBy('tip.toArtistId')
+      .createQueryBuilder("tip")
+      .select("tip.toArtistId", "toArtistId")
+      .addSelect("SUM(tip.amount)", "recentAmount")
+      .where("tip.status = :status", { status: TipStatus.VERIFIED })
+      .andWhere("tip.createdAt >= :recentStart", { recentStart })
+      .groupBy("tip.toArtistId")
       .getRawMany();
 
     // Get historical tips (last 30 days)
     const historicalTips = await this.tipRepository
-      .createQueryBuilder('tip')
-      .select('tip.toArtistId', 'toArtistId')
-      .addSelect('SUM(tip.amount)', 'historicalAmount')
-      .where('tip.status = :status', { status: TipStatus.COMPLETED })
-      .andWhere('tip.createdAt >= :historicalStart', { historicalStart })
-      .andWhere('tip.createdAt < :recentStart', { recentStart })
-      .groupBy('tip.toArtistId')
+      .createQueryBuilder("tip")
+      .select("tip.toArtistId", "toArtistId")
+      .addSelect("SUM(tip.amount)", "historicalAmount")
+      .where("tip.status = :status", { status: TipStatus.VERIFIED })
+      .andWhere("tip.createdAt >= :historicalStart", { historicalStart })
+      .andWhere("tip.createdAt < :recentStart", { recentStart })
+      .groupBy("tip.toArtistId")
       .getRawMany();
 
     const recentMap = new Map(
       recentTips.map((t) => [t.toArtistId, parseFloat(t.recentAmount || 0)]),
     );
     const historicalMap = new Map(
-      historicalTips.map((t) => [t.toArtistId, parseFloat(t.historicalAmount || 0)]),
+      historicalTips.map((t) => [
+        t.toArtistId,
+        parseFloat(t.historicalAmount || 0),
+      ]),
     );
 
     // Get all artists
@@ -241,7 +252,11 @@ export class LeaderboardsService {
       // toArtistId in Tip is a User ID, so we need to use artist.userId
       const recent = recentMap.get(artist.userId) || 0;
       const historical = historicalMap.get(artist.userId) || 0;
-      const growthScore = this.rankingService.calculateGrowthScore(recent, historical, 7);
+      const growthScore = this.rankingService.calculateGrowthScore(
+        recent,
+        historical,
+        7,
+      );
       return {
         artist,
         score: growthScore,
@@ -250,8 +265,9 @@ export class LeaderboardsService {
 
     scores.sort((a, b) => b.score - a.score);
 
-    return scores.slice(query.offset || 0, (query.offset || 0) + (query.limit || 50)).map(
-      (item, index) => ({
+    return scores
+      .slice(query.offset || 0, (query.offset || 0) + (query.limit || 50))
+      .map((item, index) => ({
         id: item.artist.id,
         rank: (query.offset || 0) + index + 1,
         score: item.score,
@@ -260,15 +276,14 @@ export class LeaderboardsService {
         additionalData: {
           genre: item.artist.genre,
         },
-      }),
-    );
+      }));
   }
 
   private async getArtistByGenre(
     query: LeaderboardQueryDto,
   ): Promise<LeaderboardEntryDto[]> {
     if (!query.genre) {
-      throw new Error('Genre is required for artist-by-genre leaderboard');
+      throw new Error("Genre is required for artist-by-genre leaderboard");
     }
 
     return this.getArtistMostTipped({ ...query, genre: query.genre });
@@ -285,19 +300,22 @@ export class LeaderboardsService {
     );
 
     const queryBuilder = this.tipRepository
-      .createQueryBuilder('tip')
-      .where('tip.status = :status', { status: TipStatus.COMPLETED });
+      .createQueryBuilder("tip")
+      .where("tip.status = :status", { status: TipStatus.VERIFIED });
 
     if (query.timeframe !== Timeframe.ALL_TIME) {
-      queryBuilder.andWhere('tip.createdAt BETWEEN :start AND :end', { start, end });
+      queryBuilder.andWhere("tip.createdAt BETWEEN :start AND :end", {
+        start,
+        end,
+      });
     }
 
     const results = await queryBuilder
-      .select('tip.fromUserId', 'fromUserId')
-      .addSelect('COALESCE(SUM(tip.amount), 0)', 'totalAmount')
-      .addSelect('COUNT(tip.id)', 'tipCount')
-      .groupBy('tip.fromUserId')
-      .orderBy('totalAmount', 'DESC')
+      .select("tip.fromUserId", "fromUserId")
+      .addSelect("COALESCE(SUM(tip.amount), 0)", "totalAmount")
+      .addSelect("COUNT(tip.id)", "tipCount")
+      .groupBy("tip.fromUserId")
+      .orderBy("totalAmount", "DESC")
       .limit(query.limit || 50)
       .offset(query.offset || 0)
       .getRawMany();
@@ -322,19 +340,22 @@ export class LeaderboardsService {
     );
 
     const queryBuilder = this.tipRepository
-      .createQueryBuilder('tip')
-      .where('tip.status = :status', { status: TipStatus.COMPLETED });
+      .createQueryBuilder("tip")
+      .where("tip.status = :status", { status: TipStatus.VERIFIED });
 
     if (query.timeframe !== Timeframe.ALL_TIME) {
-      queryBuilder.andWhere('tip.createdAt BETWEEN :start AND :end', { start, end });
+      queryBuilder.andWhere("tip.createdAt BETWEEN :start AND :end", {
+        start,
+        end,
+      });
     }
 
     const results = await queryBuilder
-      .select('tip.fromUserId', 'fromUserId')
-      .addSelect('COUNT(tip.id)', 'tipCount')
-      .addSelect('COALESCE(SUM(tip.amount), 0)', 'totalAmount')
-      .groupBy('tip.fromUserId')
-      .orderBy('tipCount', 'DESC')
+      .select("tip.fromUserId", "fromUserId")
+      .addSelect("COUNT(tip.id)", "tipCount")
+      .addSelect("COALESCE(SUM(tip.amount), 0)", "totalAmount")
+      .groupBy("tip.fromUserId")
+      .orderBy("tipCount", "DESC")
       .limit(query.limit || 50)
       .offset(query.offset || 0)
       .getRawMany();
@@ -358,28 +379,30 @@ export class LeaderboardsService {
       query.timeframe || Timeframe.ALL_TIME,
     );
 
-    const { start, end } = this.rankingService.getDateRange(
-      query.timeframe || Timeframe.ALL_TIME,
-    );
-
     const queryBuilder = this.tipRepository
-      .createQueryBuilder('tip')
-      .where('tip.status = :status', { status: TipStatus.COMPLETED });
+      .createQueryBuilder("tip")
+      .where("tip.status = :status", { status: TipStatus.VERIFIED });
 
     if (query.timeframe !== Timeframe.ALL_TIME) {
-      queryBuilder.andWhere('tip.createdAt BETWEEN :start AND :end', { start, end });
+      queryBuilder.andWhere("tip.createdAt BETWEEN :start AND :end", {
+        start,
+        end,
+      });
     }
 
     // Get max tip per sender using subquery
     const subQuery = this.tipRepository
-      .createQueryBuilder('tip2')
-      .select('tip2.senderAddress', 'senderAddress')
-      .addSelect('MAX(tip2.amount)', 'maxAmount')
-      .where('tip2.status = :status', { status: TipStatus.VERIFIED })
-      .groupBy('tip2.senderAddress');
+      .createQueryBuilder("tip2")
+      .select("tip2.senderAddress", "senderAddress")
+      .addSelect("MAX(tip2.amount)", "maxAmount")
+      .where("tip2.status = :status", { status: TipStatus.VERIFIED })
+      .groupBy("tip2.senderAddress");
 
     if (query.timeframe !== Timeframe.ALL_TIME) {
-      subQuery.andWhere('tip2.createdAt BETWEEN :start AND :end', { start, end });
+      subQuery.andWhere("tip2.createdAt BETWEEN :start AND :end", {
+        start,
+        end,
+      });
     }
 
     const maxTips = await subQuery.getRawMany();
@@ -388,15 +411,18 @@ export class LeaderboardsService {
     const results = await Promise.all(
       maxTips.map(async (maxTip) => {
         const tipQuery = this.tipRepository
-          .createQueryBuilder('tip')
-          .where('tip.fromUserId = :userId', { userId: maxTip.fromUserId })
-          .andWhere('tip.amount = :amount', { amount: maxTip.maxAmount })
-          .andWhere('tip.status = :status', { status: TipStatus.COMPLETED })
-          .orderBy('tip.createdAt', 'DESC')
+          .createQueryBuilder("tip")
+          .where("tip.fromUserId = :userId", { userId: maxTip.fromUserId })
+          .andWhere("tip.amount = :amount", { amount: maxTip.maxAmount })
+          .andWhere("tip.status = :status", { status: TipStatus.VERIFIED })
+          .orderBy("tip.createdAt", "DESC")
           .limit(1);
 
         if (query.timeframe !== Timeframe.ALL_TIME) {
-          tipQuery.andWhere('tip.createdAt BETWEEN :start AND :end', { start, end });
+          tipQuery.andWhere("tip.createdAt BETWEEN :start AND :end", {
+            start,
+            end,
+          });
         }
 
         const tip = await tipQuery.getOne();
@@ -411,8 +437,9 @@ export class LeaderboardsService {
 
     results.sort((a, b) => b.maxAmount - a.maxAmount);
 
-    return results.slice(query.offset || 0, (query.offset || 0) + (query.limit || 50)).map(
-      (result, index) => ({
+    return results
+      .slice(query.offset || 0, (query.offset || 0) + (query.limit || 50))
+      .map((result, index) => ({
         id: result.fromUserId,
         rank: (query.offset || 0) + index + 1,
         score: result.maxAmount,
@@ -422,8 +449,7 @@ export class LeaderboardsService {
           tipDate: result.tipCreatedAt,
           userId: result.fromUserId,
         },
-      }),
-    );
+      }));
   }
 
   /**
@@ -433,16 +459,20 @@ export class LeaderboardsService {
     query: LeaderboardQueryDto,
   ): Promise<LeaderboardEntryDto[]> {
     const tracks = await this.trackRepository.find({
-      relations: ['artist', 'tips'],
+      relations: ["artist", "tips"],
       where: { isPublic: true },
     });
 
     const now = new Date();
     const scores = tracks.map((track) => {
       const ageInDays = this.rankingService.getAgeInDays(track.createdAt);
-      const verifiedTips = track.tips?.filter((t) => t.status === TipStatus.COMPLETED) || [];
-      const totalTipAmount = verifiedTips.reduce((sum, tip) => sum + parseFloat(tip.amount.toString()), 0);
-      
+      const verifiedTips =
+        track.tips?.filter((t) => t.status === TipStatus.VERIFIED) || [];
+      const totalTipAmount = verifiedTips.reduce(
+        (sum, tip) => sum + parseFloat(tip.amount.toString()),
+        0,
+      );
+
       const score = this.rankingService.calculateTrendingScore(
         track.plays,
         verifiedTips.length,
@@ -458,8 +488,9 @@ export class LeaderboardsService {
 
     scores.sort((a, b) => b.score - a.score);
 
-    return scores.slice(query.offset || 0, (query.offset || 0) + (query.limit || 50)).map(
-      (item, index) => ({
+    return scores
+      .slice(query.offset || 0, (query.offset || 0) + (query.limit || 50))
+      .map((item, index) => ({
         id: item.track.id,
         rank: (query.offset || 0) + index + 1,
         score: item.score,
@@ -471,8 +502,7 @@ export class LeaderboardsService {
           tipCount: item.track.tipCount,
           genre: item.track.genre,
         },
-      }),
-    );
+      }));
   }
 
   private async getTrackMostTipped(
@@ -483,32 +513,37 @@ export class LeaderboardsService {
     );
 
     const queryBuilder = this.trackRepository
-      .createQueryBuilder('track')
-      .leftJoin('track.tips', 'tip', 'tip.status = :status', { status: TipStatus.COMPLETED })
-      .leftJoin('track.artist', 'artist')
-      .where('track.isPublic = :isPublic', { isPublic: true });
+      .createQueryBuilder("track")
+      .leftJoin("track.tips", "tip", "tip.status = :status", {
+        status: TipStatus.VERIFIED,
+      })
+      .leftJoin("track.artist", "artist")
+      .where("track.isPublic = :isPublic", { isPublic: true });
 
     if (query.timeframe !== Timeframe.ALL_TIME) {
-      queryBuilder.andWhere('tip.createdAt BETWEEN :start AND :end', { start, end });
+      queryBuilder.andWhere("tip.createdAt BETWEEN :start AND :end", {
+        start,
+        end,
+      });
     }
 
     const results = await queryBuilder
       .select([
-        'track.id',
-        'track.title',
-        'track.coverArtUrl',
-        'track.genre',
-        'artist.artistName',
+        "track.id",
+        "track.title",
+        "track.coverArtUrl",
+        "track.genre",
+        "artist.artistName",
       ])
-      .addSelect('COALESCE(SUM(tip.amount), 0)', 'totalAmount')
-      .addSelect('COUNT(tip.id)', 'tipCount')
-      .groupBy('track.id')
-      .addGroupBy('track.title')
-      .addGroupBy('track.coverArtUrl')
-      .addGroupBy('track.genre')
-      .addGroupBy('artist.id')
-      .addGroupBy('artist.artistName')
-      .orderBy('totalAmount', 'DESC')
+      .addSelect("COALESCE(SUM(tip.amount), 0)", "totalAmount")
+      .addSelect("COUNT(tip.id)", "tipCount")
+      .groupBy("track.id")
+      .addGroupBy("track.title")
+      .addGroupBy("track.coverArtUrl")
+      .addGroupBy("track.genre")
+      .addGroupBy("artist.id")
+      .addGroupBy("artist.artistName")
+      .orderBy("totalAmount", "DESC")
       .limit(query.limit || 50)
       .offset(query.offset || 0)
       .getRawMany();
@@ -531,18 +566,18 @@ export class LeaderboardsService {
     query: LeaderboardQueryDto,
   ): Promise<LeaderboardEntryDto[]> {
     const queryBuilder = this.trackRepository
-      .createQueryBuilder('track')
-      .leftJoin('track.artist', 'artist')
-      .where('track.isPublic = :isPublic', { isPublic: true })
+      .createQueryBuilder("track")
+      .leftJoin("track.artist", "artist")
+      .where("track.isPublic = :isPublic", { isPublic: true })
       .select([
-        'track.id',
-        'track.title',
-        'track.coverArtUrl',
-        'track.genre',
-        'track.plays',
-        'artist.artistName',
+        "track.id",
+        "track.title",
+        "track.coverArtUrl",
+        "track.genre",
+        "track.plays",
+        "artist.artistName",
       ])
-      .orderBy('track.plays', 'DESC')
+      .orderBy("track.plays", "DESC")
       .limit(query.limit || 50)
       .offset(query.offset || 0);
 
@@ -564,7 +599,10 @@ export class LeaderboardsService {
   /**
    * Invalidate cache for a specific leaderboard type
    */
-  async invalidateCache(type: LeaderboardType, query?: LeaderboardQueryDto): Promise<void> {
+  async invalidateCache(
+    type: LeaderboardType,
+    query?: LeaderboardQueryDto,
+  ): Promise<void> {
     if (query) {
       const cacheKey = this.getCacheKey(type, query);
       await this.redis.del(cacheKey);
@@ -581,9 +619,12 @@ export class LeaderboardsService {
   /**
    * Generate cache key
    */
-  private getCacheKey(type: LeaderboardType, query: LeaderboardQueryDto): string {
+  private getCacheKey(
+    type: LeaderboardType,
+    query: LeaderboardQueryDto,
+  ): string {
     const parts = [
-      'leaderboard',
+      "leaderboard",
       type,
       query.timeframe || Timeframe.ALL_TIME,
       query.limit || 50,
@@ -592,7 +633,6 @@ export class LeaderboardsService {
     if (query.genre) {
       parts.push(query.genre);
     }
-    return parts.join(':');
+    return parts.join(":");
   }
-
 }

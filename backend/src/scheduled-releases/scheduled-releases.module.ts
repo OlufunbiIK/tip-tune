@@ -1,14 +1,14 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@nestjs/schedule';
-import { ScheduledReleasesController } from './scheduled-releases.controller';
-import { ScheduledReleasesService } from './scheduled-releases.service';
-import { PreSavesService } from './presaves.service';
-import { ScheduledRelease } from './scheduled-release.entity';
-import { PreSave } from './presave.entity';
-import { Track } from '../tracks/track.entity';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { FollowsModule } from '../follows/follows.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { ScheduleModule } from "@nestjs/schedule";
+import { ScheduledReleasesController } from "./scheduled-releases.controller";
+import { ScheduledReleasesService } from "./scheduled-releases.service";
+import { PreSavesService } from "./presaves.service";
+import { ScheduledRelease } from "./entities/scheduled-release.entity";
+import { PreSave } from "./entities/presave.entity";
+import { Track } from "../tracks/entities/track.entity";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { FollowsModule } from "../follows/follows.module";
 
 @Module({
   imports: [

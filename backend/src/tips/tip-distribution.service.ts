@@ -1,7 +1,7 @@
 // src/tips/tip-distribution.service.ts
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { Collaboration, ApprovalStatus } from '../collaboration/entities/collaboration.entity';
 import { Tip } from './entities/tip.entity';
 import { Track } from '../tracks/entities/track.entity';
@@ -88,12 +88,14 @@ export class TipDistributionService {
       }
 
       // Execute Stellar multi-recipient payment
+      // Note: Assuming sendMultiRecipientPayment exists or will be implemented. 
+      // If not, this might still fail, but correcting detailed errors first.
       const transactionHash = await this.stellarService.sendMultiRecipientPayment(
         recipients.map((r) => ({
           destination: r.publicKey,
           amount: r.amount.toString(),
         })),
-        tip.transactionHash, // Source transaction reference
+        tip.stellarTxHash, // Source transaction reference
       );
 
       // Update tip as distributed
@@ -143,8 +145,8 @@ export class TipDistributionService {
 
       recipients.push({
         artistId: collab.artistId,
-        artistName: collab.artist.name,
-        publicKey: collab.artist.stellarPublicKey,
+        artistName: collab.artist.artistName,
+        publicKey: collab.artist.walletAddress,
         percentage,
         amount: Number(amount.toFixed(7)), // Stellar 7 decimal precision
         role: collab.role,
@@ -158,8 +160,8 @@ export class TipDistributionService {
 
       recipients.push({
         artistId: tip.track.artist.id,
-        artistName: tip.track.artist.name,
-        publicKey: tip.track.artist.stellarPublicKey,
+        artistName: tip.track.artist.artistName,
+        publicKey: tip.track.artist.walletAddress,
         percentage: primaryPercentage,
         amount: Number(primaryAmount.toFixed(7)),
         role: 'primary',

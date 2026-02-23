@@ -269,6 +269,18 @@ export class AuthService {
   }
 
   /**
+   * Verify access token for WebSocket connections
+   */
+  async verifyAccessToken(token: string): Promise<User> {
+    try {
+      const payload = this.jwtService.verify(token);
+      return this.getCurrentUser(payload.sub);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid access token');
+    }
+  }
+
+  /**
    * Logout - invalidate refresh token
    */
   async logout(refreshToken: string): Promise<void> {
