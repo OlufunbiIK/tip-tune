@@ -19,7 +19,7 @@ pub enum Error {
 
 /// The result when a campaign is finalized
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum CampaignResult {
     GoalMet,
     GoalNotMet,
@@ -27,7 +27,7 @@ pub enum CampaignResult {
 
 /// Status of a campaign
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum CampaignStatus {
     Active,
     Succeeded,

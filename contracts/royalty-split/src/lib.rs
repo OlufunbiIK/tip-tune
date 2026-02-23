@@ -30,7 +30,7 @@ impl RoyaltySplit {
         let mut total_percentage: u32 = 0;
         for param in collaborators.clone() {
             let (_, percentage) = param;
-            if percentage <= 0 || percentage > 100 {
+            if percentage == 0 || percentage > 100 {
                 return Err(Error::InvalidPercentage);
             }
             total_percentage += percentage;
