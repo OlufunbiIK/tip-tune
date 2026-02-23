@@ -36,10 +36,6 @@ export class ModerationService {
     addedById: string,
     artistId?: string,
   ) {
-    if (!artistId)
-      throw new BadRequestException(
-        "Only artists can use this path to add keywords",
-      );
     if (!Object.values(KeywordSeverity).includes(severity as KeywordSeverity)) {
       throw new BadRequestException(
         `Invalid severity: ${severity}. Must be one of: ${Object.values(KeywordSeverity).join(", ")}`,
