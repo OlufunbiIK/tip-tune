@@ -20,6 +20,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TipVerifiedEvent } from './events/tip-verified.event';
 import { NotificationType } from '../notifications/notification.entity';
 import { FeesService } from '../fees/fees.service';
+import { ModerationService } from '../moderation/moderation.service';
 
 @Injectable()
 export class TipsService {
@@ -35,6 +36,7 @@ export class TipsService {
     private readonly activitiesService: ActivitiesService,
     private readonly eventEmitter: EventEmitter2,
     private readonly feesService: FeesService,
+    private readonly moderationService: ModerationService,
   ) { }
 
   async create(userId: string, createTipDto: CreateTipDto): Promise<Tip> {
@@ -122,10 +124,11 @@ export class TipsService {
 
     const savedTip = await this.tipRepository.save(newTip);
 
-    // 5. Record platform fee
+    await this.moderationService.moderateTipMessage(savedTip, artistId);
+    await this.tipRepository.save(savedTip);
+
     await this.feesService.recordFeeForTip(savedTip);
 
-    // 6. Emit event
     this.eventEmitter.emit('tip.verified', new TipVerifiedEvent(savedTip, userId));
 
     // 7. Notify artist

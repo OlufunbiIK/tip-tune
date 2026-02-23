@@ -23,6 +23,7 @@ import { TipsService } from './tips.service';
 import { CreateTipDto } from './create-tips.dto';
 import { PaginationQueryDto } from './pagination.dto';
 import { Tip, TipStatus } from './entities/tip.entity';
+import { ModerateMessagePipe } from '../moderation/pipes/moderate-message.pipe';
 
 @ApiTags('Tips')
 @Controller('tips')
@@ -51,7 +52,7 @@ export class TipsController {
     description: 'Tip with this Stellar transaction hash already exists',
   })
   async create(
-    @Body() createTipDto: CreateTipDto,
+    @Body(ModerateMessagePipe) createTipDto: CreateTipDto,
     @Headers('x-user-id') userId: string,
   ): Promise<Tip> {
     if (!userId) {
