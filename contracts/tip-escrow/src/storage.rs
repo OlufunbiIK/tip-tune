@@ -1,9 +1,15 @@
-use soroban_sdk::{symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol, Vec, String};
 
-use crate::types::{RoyaltySplit, TipRecord};
+use crate::types::{RoyaltySplit, TipRecord, TipEscrow};
 
 const TIPS: Symbol = symbol_short!("TIPS");
 const SPLITS: Symbol = symbol_short!("SPLITS");
+
+#[contracttype]
+#[derive(Clone)]
+pub enum DataKey {
+    Escrow(String),
+}
 
 pub fn save_tip(env: &Env, _tip_id: u64, tip: &TipRecord) {
     let mut tips: Vec<TipRecord> = env.storage().instance().get(&TIPS).unwrap_or(Vec::new(env));
@@ -21,4 +27,12 @@ pub fn save_splits(env: &Env, artist: &Address, splits: &Vec<RoyaltySplit>) {
 
 pub fn get_splits(env: &Env, artist: &Address) -> Option<Vec<RoyaltySplit>> {
     env.storage().instance().get(&(SPLITS, artist))
+}
+
+pub fn save_escrow(env: &Env, escrow_id: String, escrow: &TipEscrow) {
+    env.storage().persistent().set(&DataKey::Escrow(escrow_id), escrow);
+}
+
+pub fn get_escrow(env: &Env, escrow_id: String) -> Option<TipEscrow> {
+    env.storage().persistent().get(&DataKey::Escrow(escrow_id))
 }

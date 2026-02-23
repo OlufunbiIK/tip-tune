@@ -113,3 +113,32 @@ fn test_invalid_splits_total() {
 
     client.set_royalty_splits(&artist, &splits);
 }
+
+#[test]
+fn test_create_and_get_escrow() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, TipEscrowContract);
+    let client = TipEscrowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let tipper = Address::generate(&env);
+    let artist = Address::generate(&env);
+
+    let (token, token_admin) = create_token_contract(&env, &admin);
+    token_admin.mint(&tipper, &1000);
+    
+    let asset = types::Asset::Token(token.address.clone());
+    
+    let amount = 200;
+    let escrow_id = client.create_escrow(&tipper, &artist, &amount, &asset);
+
+    assert_eq!(token.balance(&tipper), 800);
+    assert_eq!(token.balance(&contract_id), 200);
+
+    let escrow = client.get_escrow(&escrow_id);
+    assert_eq!(escrow.tipper, tipper);
+    assert_eq!(escrow.artist, artist);
+    assert_eq!(escrow.amount, amount);
+}
