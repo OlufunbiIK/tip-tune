@@ -7,6 +7,10 @@ import ArtistTrackList from '@/components/artist/ArtistTrackList';
 import Skeleton from '@/components/ui/Skeleton';
 import { fetchArtistProfilePage, followArtist, unfollowArtist } from '@/services/artistService';
 import { ArtistProfilePageData } from '@/types';
+import SongRequestModal from '@/components/requests/SongRequestModal';
+import RequestQueue from '@/components/requests/RequestQueue';
+import type { SongRequest } from '@/components/requests/types';
+import RequestNotification from '@/components/requests/RequestNotification';
 
 const ArtistProfilePage: React.FC = () => {
   const { artistId = 'dj-melodica' } = useParams();
@@ -15,6 +19,9 @@ const ArtistProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isFollowPending, setIsFollowPending] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requests, setRequests] = useState<SongRequest[]>([]);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const loadArtist = useCallback(async () => {
     setIsLoading(true);
@@ -76,6 +83,74 @@ const ArtistProfilePage: React.FC = () => {
     }
   };
 
+  const handleCreateRequest = async ({
+    trackId,
+    tipAmount,
+    assetCode,
+    message,
+  }: {
+    trackId: string;
+    tipAmount: number;
+    assetCode: 'XLM' | 'USDC';
+    message?: string;
+  }) => {
+    if (!profileData) return;
+
+    // Simple duplicate prevention: only one pending request per track from same fan name placeholder
+    const fanName = 'You';
+    const hasDuplicate = requests.some(
+      (r) =>
+        r.trackId === trackId &&
+        r.fanName === fanName &&
+        r.status === 'pending'
+    );
+    if (hasDuplicate) {
+      setNotification('You have already requested this track. Please wait for the artist.');
+      return;
+    }
+
+    const track = profileData.tracks.find((t) => t.id === trackId);
+    if (!track) return;
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour
+
+    const newRequest: SongRequest = {
+      id: `req_${Date.now()}`,
+      trackId,
+      trackTitle: track.title,
+      tipAmount,
+      assetCode,
+      fanName,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      status: 'pending',
+      message,
+    };
+
+    setRequests((prev) => [newRequest, ...prev]);
+    setNotification('Song request sent! Higher tips move you up the queue.');
+  };
+
+  const handleAcceptRequest = (id: string) => {
+    setRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'accepted' } : r))
+    );
+  };
+
+  const handleDeclineRequest = (id: string) => {
+    setRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'declined' } : r))
+    );
+  };
+
+  const handlePlayRequest = (id: string) => {
+    setRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'played' } : r))
+    );
+    setNotification('Fan has been notified that their request was played.');
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -121,7 +196,16 @@ const ArtistProfilePage: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ArtistTrackList tracks={profileData.tracks} />
+          <div className="space-y-4">
+            <ArtistTrackList tracks={profileData.tracks} />
+            <button
+              type="button"
+              onClick={() => setIsRequestModalOpen(true)}
+              className="inline-flex items-center justify-center rounded-lg bg-primary-blue px-4 py-2 text-sm font-semibold text-white hover:bg-secondary-indigo"
+            >
+              Request a song
+            </button>
+          </div>
         </div>
         <div className="space-y-6">
           <ArtistBio bio={profileData.artist.bio} socialLinks={profileData.artist.socialLinks} />
@@ -138,8 +222,33 @@ const ArtistProfilePage: React.FC = () => {
               ))}
             </ul>
           </section>
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
+            <h2 className="text-lg font-semibold text-gray-900">Song Requests</h2>
+            <p className="text-xs text-gray-500">
+              Fans can attach a tip to their request. Higher tips are sorted to the top.
+            </p>
+            {notification && (
+              <RequestNotification message={notification} type="info" />
+            )}
+            <div className="mt-2">
+              <RequestQueue
+                requests={requests}
+                onAccept={handleAcceptRequest}
+                onDecline={handleDeclineRequest}
+                onPlay={handlePlayRequest}
+              />
+            </div>
+          </section>
         </div>
       </div>
+
+      <SongRequestModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        tracks={profileData.tracks}
+        onCreateRequest={handleCreateRequest}
+      />
     </div>
   );
 };

@@ -9,9 +9,10 @@ interface TipCardProps {
   tip: TipHistoryItem;
   /** 'sent' | 'received' – determines which party to emphasize (artist vs tipper) */
   variant: 'sent' | 'received';
+  onShare?: (tip: TipHistoryItem, variant: 'sent' | 'received') => void;
 }
 
-const TipCard: React.FC<TipCardProps> = ({ tip, variant }) => {
+const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
   const displayName = variant === 'sent' ? tip.artistName ?? 'Artist' : tip.tipperName;
   const avatarUrl = variant === 'received' ? tip.tipperAvatar : undefined;
   const amountXlm = tip.assetCode ? `${Number(tip.amount).toFixed(2)} ${tip.assetCode}` : formatCurrency(tip.amount);
@@ -71,18 +72,31 @@ const TipCard: React.FC<TipCardProps> = ({ tip, variant }) => {
           <p className="mt-3 text-sm text-gray-600 line-clamp-2">{tip.message}</p>
         )}
 
-        {stellarUrl && (
-          <a
-            href={stellarUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary-blue hover:text-secondary-indigo"
-            data-testid="stellar-tx-link"
-          >
-            View on Stellar Explorer
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        )}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          {stellarUrl && (
+            <a
+              href={stellarUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-blue hover:text-secondary-indigo"
+              data-testid="stellar-tx-link"
+            >
+              View on Stellar Explorer
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+
+          {onShare && (
+            <button
+              type="button"
+              onClick={() => onShare(tip, variant)}
+              className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-primary-blue"
+              data-testid="tip-share-button"
+            >
+              Share card
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

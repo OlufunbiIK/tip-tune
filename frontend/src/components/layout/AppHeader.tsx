@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X} from 'lucide-react';
+import WalletBalanceWidget from '../wallet/WalletBalanceWidget';
 
 const AppHeader: React.FC = () => {
   const location = useLocation();
@@ -22,7 +23,7 @@ const AppHeader: React.FC = () => {
   return (
     <header className="bg-white sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2" onClick={closeMenu}>
             <img
@@ -35,34 +36,41 @@ const AppHeader: React.FC = () => {
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-4 text-sm sm:text-base">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.to;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive
-                      ? 'bg-deep-slate text-white'
-                      : 'text-primary-blue hover:text-white hover:bg-primary-blue'
-                    }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="flex items-center gap-4">
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-4 text-sm sm:text-base">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.to;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive
+                        ? 'bg-deep-slate text-white'
+                        : 'text-primary-blue hover:text-white hover:bg-primary-blue'
+                      }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Mobile menu button */}
-          <button
-            type="button"
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-deep-slate hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-blue"
-            onClick={toggleMenu}
-            aria-label="Toggle navigation"
-          >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+            {/* Wallet balance widget (desktop only for now) */}
+            <div className="hidden md:block">
+              <WalletBalanceWidget />
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              type="button"
+              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-deep-slate hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-blue"
+              onClick={toggleMenu}
+              aria-label="Toggle navigation"
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile nav */}

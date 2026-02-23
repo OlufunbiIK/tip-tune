@@ -7,6 +7,7 @@ import { TipHistoryItem } from '../types';
 import { exportTipHistoryToCSV } from '../utils/formatter';
 import { tipService } from '../services';
 import { useWallet } from '../hooks/useWallet';
+import SocialShareModal from '../components/tip/SocialShareModal';
 
 const PAGE_SIZE = 10;
 
@@ -103,6 +104,10 @@ export const TipHistoryPage: React.FC = () => {
   const [receivedApi, setReceivedApi] = useState<TipHistoryItem[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const [shareTip, setShareTip] = useState<TipHistoryItem | null>(null);
+  const [shareVariant, setShareVariant] = useState<'sent' | 'received'>('sent');
+  const [isShareOpen, setIsShareOpen] = useState(false);
+
   const { publicKey } = useWallet();
   const mock = useMockTipHistory();
 
@@ -173,6 +178,12 @@ export const TipHistoryPage: React.FC = () => {
     () => receivedFiltered.reduce((sum, t) => sum + (t.usdAmount ?? t.amount), 0),
     [receivedFiltered]
   );
+
+  const handleShare = (tip: TipHistoryItem, variant: 'sent' | 'received') => {
+    setShareTip(tip);
+    setShareVariant(variant);
+    setIsShareOpen(true);
+  };
 
   const handleTabChange = (tab: 'sent' | 'received') => {
     setActiveTab(tab);
@@ -276,7 +287,12 @@ export const TipHistoryPage: React.FC = () => {
               </p>
             ) : (
               paginated.map((tip) => (
-                <TipCard key={tip.id} tip={tip} variant={activeTab} />
+                <TipCard
+                  key={tip.id}
+                  tip={tip}
+                  variant={activeTab}
+                  onShare={handleShare}
+                />
               ))
             )}
           </div>
@@ -314,6 +330,13 @@ export const TipHistoryPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      <SocialShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        tip={shareTip}
+        variant={shareVariant}
+      />
     </div>
   );
 };

@@ -43,4 +43,27 @@ describe('TipCard', () => {
     render(<TipCard tip={baseTip} variant="sent" />);
     expect(screen.getByTestId('tip-card')).toBeInTheDocument();
   });
+
+  it('renders share button when onShare is provided and calls handler on click', async () => {
+    const user = userEvent.setup();
+    const handleShare = jest.fn();
+
+    render(
+      <TipCard
+        tip={baseTip}
+        variant="sent"
+        onShare={handleShare}
+      />
+    );
+
+    const btn = screen.getByTestId('tip-share-button');
+    expect(btn).toBeInTheDocument();
+
+    await user.click(btn);
+
+    expect(handleShare).toHaveBeenCalledWith(
+      expect.objectContaining({ id: baseTip.id }),
+      'sent'
+    );
+  });
 });
