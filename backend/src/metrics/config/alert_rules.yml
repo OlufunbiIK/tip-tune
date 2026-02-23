@@ -1,0 +1,103 @@
+groups:
+  - name: tiptune_alerts
+    interval: 30s
+    rules:
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_request_errors_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors/sec (threshold: 0.05)"
+
+      # API Response Time
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is {{ $value }}s (threshold: 2s)"
+
+      # Database Query Performance
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s (threshold: 1s)"
+
+      # Stellar Transaction Failures
+      - alert: HighStellarFailureRate
+        expr: rate(stellar_transactions_failure_total[5m]) / rate(stellar_transactions_success_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Stellar transaction failure rate"
+          description: "Failure rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # Memory Usage
+      - alert: HighMemoryUsage
+        expr: (app_memory_usage_bytes{type="heap_used"} / app_memory_usage_bytes{type="heap_total"}) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # CPU Usage
+      - alert: HighCPUUsage
+        expr: app_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% (threshold: 80%)"
+
+      # Database Connection Pool
+      - alert: DatabaseConnectionPoolExhaustion
+        expr: db_connection_pool_size{state="active"} / db_connection_pool_size{state="total"} > 0.9
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "Pool usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # Queue Length
+      - alert: HighQueueLength
+        expr: queue_length > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High queue length detected"
+          description: "Queue {{ $labels.queue_name }} has {{ $value }} items (threshold: 1000)"
+
+      # Service Down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+
+      # Low Tips Per Second (Business Metric)
+      - alert: LowTipActivity
+        expr: rate(tips_total[1h]) < 0.01
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low tip activity"
+          description: "Tip rate is {{ $value }} tips/sec over the last hour"

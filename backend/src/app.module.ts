@@ -36,6 +36,7 @@ import { ModerationModule } from "./moderation/moderation.module";
       isGlobal: true,
       envFilePath: ".env",
     }),
+    MetricsModule,
     TypeOrmModule.forRoot({
       type: "postgres",
       host: process.env.DB_HOST || "localhost",
