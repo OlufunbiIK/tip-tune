@@ -4,41 +4,46 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
-  Index,
-} from "typeorm";
-import { User } from "../../users/entities/user.entity";
+  JoinColumn,
+} from 'typeorm';
+import { User } from '../../users/entities/user.entity';
+import { Artist } from '../../artists/entities/artist.entity';
 
 export enum KeywordSeverity {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
 }
 
-@Entity("blocked_keywords")
+@Entity('blocked_keywords')
 export class BlockedKeyword {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  @Index()
+  @Column({ type: 'varchar', length: 255 })
   keyword: string;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: KeywordSeverity,
-    default: KeywordSeverity.MEDIUM,
   })
   severity: KeywordSeverity;
 
-  @Column({ type: "uuid", nullable: true })
-  artistId: string | null; // Null if global (admin-added)
-
-  @Column({ type: "uuid" })
+  @Column({ type: 'uuid' })
   addedById: string;
 
   @ManyToOne(() => User)
+  @JoinColumn({ name: 'addedById' })
   addedBy: User;
+
+  @Column({ type: 'uuid', nullable: true })
+  artistId: string | null;
+
+  @ManyToOne(() => Artist, { nullable: true })
+  @JoinColumn({ name: 'artistId' })
+  artist: Artist | null;
 
   @CreateDateColumn()
   createdAt: Date;
 }
+

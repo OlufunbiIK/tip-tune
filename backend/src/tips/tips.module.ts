@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ActivitiesModule } from '../activities/activities.module';
 import { FeesModule } from '../fees/fees.module';
+import { ModerationModule } from '../moderation/moderation.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { FeesModule } from '../fees/fees.module';
     NotificationsModule,
     forwardRef(() => ActivitiesModule),
     FeesModule,
+    ModerationModule,
   ],
   controllers: [TipsController],
   providers: [TipsService],

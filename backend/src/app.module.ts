@@ -21,6 +21,7 @@ import { ScheduledReleasesModule } from './scheduled-releases/scheduled-releases
 import { LeaderboardsModule } from './leaderboards/leaderboards.module';
 import { ReportsModule } from './reports/reports.module';
 import { FeesModule } from './fees/fees.module';
+import { ModerationModule } from './moderation/moderation.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { FeesModule } from './fees/fees.module';
     LeaderboardsModule,
     ReportsModule,
     FeesModule,
+    ModerationModule,
   ],
   controllers: [],
   providers: [],
