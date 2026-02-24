@@ -7,7 +7,7 @@ mod types;
 mod test;
 
 use soroban_sdk::{contract, contractimpl, symbol_short, token, Address, Env, String, Vec};
-use types::{Asset, Error, RoyaltySplit, TipEscrow, TipRecord};
+use types::{Asset, Error, EscrowStatus, RoyaltySplit, TipEscrow, TipRecord};
 
 #[contract]
 pub struct TipEscrowContract;
@@ -20,6 +20,7 @@ impl TipEscrowContract {
         artist: Address,
         amount: i128,
         asset: Asset,
+        release_time: u64,
     ) -> Result<String, Error> {
         tipper.require_auth();
 
@@ -59,7 +60,7 @@ impl TipEscrowContract {
             }
         }
 
-        let escrow_id = String::from_slice(&env, &buf[i..]);
+        let escrow_id = String::from_bytes(&env, &buf[i..]);
 
         let escrow = TipEscrow {
             escrow_id: escrow_id.clone(),
@@ -67,6 +68,9 @@ impl TipEscrowContract {
             artist,
             amount,
             asset,
+            status: EscrowStatus::Pending,
+            release_time,
+            created_at: env.ledger().timestamp(),
         };
 
         storage::save_escrow(&env, escrow_id.clone(), &escrow);
