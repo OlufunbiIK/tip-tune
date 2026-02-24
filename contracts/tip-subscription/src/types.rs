@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, String};
+use soroban_sdk::{contracterror, contracttype, Address, String};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,13 +21,14 @@ pub struct Subscription {
     pub id: String,
     pub subscriber: Address,
     pub artist: Address,
+    pub token: Address,
     pub amount: i128,
     pub frequency: SubscriptionFrequency,
     pub status: SubscriptionStatus,
     pub next_payment_timestamp: u64,
 }
 
-#[contracttype]
+#[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     NotAuthorized = 1,
