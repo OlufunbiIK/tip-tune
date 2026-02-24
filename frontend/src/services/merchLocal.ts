@@ -40,7 +40,7 @@ export function upsertMerch(artistId: string, input: MerchInput, id?: string): M
   }
 
   const created: MerchItem = {
-    id: crypto.randomUUID(),
+    id: UUID,
     artistId,
     ...input,
     createdAt: now,
