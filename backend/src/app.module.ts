@@ -28,6 +28,7 @@ import { VersionsModule } from "./versions/versions.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { HealthModule } from "./health/health.module";
 import { VersionModule } from "./version/version.module";
+import { ArtistStatusModule } from "./artist-status/artist-status.module";
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { VersionModule } from "./version/version.module";
     VersionsModule,
     HealthModule,
     VersionModule,
+    ArtistStatusModule,
   ],
   controllers: [],
   providers: [],
