@@ -126,8 +126,16 @@ export class TipsService {
     const assetIssuer = paymentOp.asset_issuer;
     const assetType = paymentOp.asset_type;
 
-    const user = await this.usersService.findOne(userId);
-    const senderAddress = user.walletAddress;
+
+    // If user is soft-deleted, anonymize sender
+    let user = null;
+    let senderAddress = 'anonymous';
+    try {
+      user = await this.usersService.findOne(userId);
+      senderAddress = user.walletAddress;
+    } catch (e) {
+      // If user not found or soft-deleted, keep senderAddress as 'anonymous'
+    }
     const receiverAddress = artist.walletAddress;
 
     // 4. Create Tip record
@@ -135,7 +143,7 @@ export class TipsService {
       artistId,
       trackId,
       stellarTxHash,
-      senderAddress: senderAddress || "anonymous", // Or handle if wallet missing
+      senderAddress: senderAddress || "anonymous",
       receiverAddress,
       amount: parseFloat(amount),
       assetCode,
@@ -196,6 +204,7 @@ export class TipsService {
       .leftJoinAndSelect("tip.artist", "artist")
       .leftJoinAndSelect("tip.track", "track")
       .where("tip.fromUserId = :userId", { userId })
+      .andWhere("artist.isDeleted = false")
       .orderBy("tip.createdAt", "DESC")
       .skip(skip)
       .take(limit);
@@ -204,7 +213,15 @@ export class TipsService {
       queryBuilder.andWhere("tip.status = :status", { status });
     }
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    let [data, total] = await queryBuilder.getManyAndCount();
+
+    // Anonymize tips if user is soft-deleted
+    data = data.map(tip => {
+      if (tip.artist && tip.artist.isDeleted) {
+        tip.artist = null;
+      }
+      return tip;
+    });
 
     return this.createPaginatedResponse(data, total, page, limit);
   }
@@ -221,6 +238,7 @@ export class TipsService {
       .leftJoinAndSelect("tip.fromUser", "user")
       .leftJoinAndSelect("tip.track", "track")
       .where("tip.artistId = :artistId", { artistId })
+      .andWhere("user.isDeleted = false")
       .orderBy("tip.createdAt", "DESC")
       .skip(skip)
       .take(limit);
@@ -229,7 +247,16 @@ export class TipsService {
       queryBuilder.andWhere("tip.status = :status", { status });
     }
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    let [data, total] = await queryBuilder.getManyAndCount();
+
+    // Anonymize sender if user is soft-deleted
+    data = data.map(tip => {
+      if (tip.fromUser && tip.fromUser.isDeleted) {
+        tip.fromUser = null;
+        tip.senderAddress = 'anonymous';
+      }
+      return tip;
+    });
 
     return this.createPaginatedResponse(data, total, page, limit);
   }

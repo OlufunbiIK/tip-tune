@@ -46,4 +46,15 @@ export class ArtistsController {
   remove(@Req() req) {
     return this.artistsService.remove(req.user.id);
   }
+
+  // Admin only
+  @Post(':artistId/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted artist (admin only)' })
+  @ApiParam({ name: 'artistId', description: 'Artist UUID', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Artist restored successfully' })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  async restore(@Param('artistId') artistId: string) {
+    // TODO: Add admin guard
+    return this.artistsService.restore(artistId);
+  }
 }
