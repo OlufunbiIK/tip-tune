@@ -19,11 +19,65 @@ impl TimeLockContract {
         tipper: Address,
         artist: Address,
         amount: i128,
+        asset_address: Address,
         unlock_time: u64,
         message: String,
     ) -> Result<String, Error> {
-        // Implementation will follow in next commit
-        Err(Error::Unauthorized)
+        tipper.require_auth();
+
+        if amount <= 0 {
+            return Err(Error::InvalidAmount);
+        }
+
+        let current_time = env.ledger().timestamp();
+        if unlock_time <= current_time {
+            return Err(Error::InvalidUnlockTime);
+        }
+
+        // Lock funds inside contract
+        let token_client = token::Client::new(&env, &asset_address);
+        token_client.transfer(&tipper, &env.current_contract_address(), &amount);
+
+        let counter = storage::increment_counter(&env);
+        
+        // Generate lock_id (simple string conversion of counter)
+        let mut buf = [0u8; 10];
+        let mut i = 10;
+        let mut n = counter;
+        if n == 0 {
+            i -= 1;
+            buf[i] = b'0';
+        } else {
+            while n > 0 {
+                i -= 1;
+                buf[i] = b'0' + (n % 10) as u8;
+                n /= 10;
+            }
+        }
+        let lock_id_str = core::str::from_utf8(&buf[i..]).unwrap();
+        let lock_id = String::from_slice(&env, lock_id_str);
+
+        let tip = TimeLockTip {
+            lock_id: lock_id.clone(),
+            tipper,
+            artist,
+            amount,
+            asset: Asset::Token(asset_address),
+            unlock_time,
+            message,
+            status: TimeLockStatus::Locked,
+            created_at: current_time,
+        };
+
+        storage::save_tip(&env, lock_id.clone(), &tip);
+
+        // Emit event
+        env.events().publish(
+            (symbol_short!("tip_lock"), tip.tipper.clone(), tip.artist.clone()),
+            tip.clone(),
+        );
+
+        Ok(lock_id)
     }
 
     pub fn claim_tip(
