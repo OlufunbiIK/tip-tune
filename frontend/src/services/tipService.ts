@@ -1,5 +1,5 @@
 import apiClient from '../utils/api';
-import { Tip, TipStatus, PaginatedResponse } from '../types';
+import { Tip, TipReceipt, TipStatus, PaginatedResponse } from '../types';
 
 export const tipService = {
   create: async (tipData: {
@@ -17,6 +17,16 @@ export const tipService = {
 
   getById: async (id: string): Promise<Tip> => {
     const response = await apiClient.get<Tip>(`/tips/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Fetch a full tip receipt with all blockchain details and loaded relations.
+   * Uses the same endpoint as getById but expects the backend to return
+   * the full Tip entity shape with artist/track relations loaded.
+   */
+  getReceipt: async (id: string): Promise<TipReceipt> => {
+    const response = await apiClient.get<TipReceipt>(`/tips/${id}`);
     return response.data;
   },
 

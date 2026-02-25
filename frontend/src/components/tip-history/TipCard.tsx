@@ -1,5 +1,6 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ExternalLink, Receipt } from 'lucide-react';
 import { TipHistoryItem } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatter';
 
@@ -72,7 +73,7 @@ const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
           <p className="mt-3 text-sm text-gray-600 line-clamp-2">{tip.message}</p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           {stellarUrl && (
             <a
               href={stellarUrl}
@@ -85,6 +86,15 @@ const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
+
+          <Link
+            to={`/tips/${tip.id}/receipt`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-blue hover:text-secondary-indigo"
+            data-testid="view-receipt-link"
+          >
+            View Receipt
+            <Receipt className="h-4 w-4" />
+          </Link>
 
           {onShare && (
             <button
