@@ -3,6 +3,7 @@ import { RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { SanitiseInputPipe } from './common/pipes/sanitise-input.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,7 @@ async function bootstrap() {
 
   // Global validation pipe
   app.useGlobalPipes(
+    new SanitiseInputPipe(),
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,

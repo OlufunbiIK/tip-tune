@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import { SanitiseAsPlainText } from '../common/utils/sanitise.util';
 
 export class CreateCommentDto {
   @IsUUID()
@@ -8,6 +9,7 @@ export class CreateCommentDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
+  @SanitiseAsPlainText()
   content: string;
 
   @IsUUID()
@@ -19,6 +21,7 @@ export class UpdateCommentDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
+  @SanitiseAsPlainText()
   content: string;
 }
 

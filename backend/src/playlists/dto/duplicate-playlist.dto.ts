@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText } from '../../common/utils/sanitise.util';
 
 export class DuplicatePlaylistDto {
   @ApiPropertyOptional({
@@ -10,6 +11,7 @@ export class DuplicatePlaylistDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
+  @SanitiseAsPlainText()
   name?: string;
 
   @ApiPropertyOptional({

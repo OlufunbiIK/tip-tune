@@ -2,6 +2,7 @@ import { PartialType } from '@nestjs/swagger';
 import { CreateUserDto } from './create-user.dto';
 import { IsString, IsEmail, IsOptional, IsBoolean, IsUrl, MaxLength, MinLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText, SanitiseAsRichText } from '../../common/utils/sanitise.util';
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ApiPropertyOptional({
@@ -14,6 +15,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsString()
   @MinLength(3)
   @MaxLength(255)
+  @SanitiseAsPlainText()
   username?: string;
 
   @ApiPropertyOptional({
@@ -49,6 +51,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   })
   @IsOptional()
   @IsString()
+  @SanitiseAsRichText()
   bio?: string;
 
   @ApiPropertyOptional({
