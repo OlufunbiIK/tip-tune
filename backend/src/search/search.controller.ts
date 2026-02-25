@@ -4,6 +4,7 @@ import { SearchService, SearchResult } from './search.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { SearchSuggestionsQueryDto } from './dto/search-suggestions-query.dto';
 import { Public } from '../auth/decorators/public.decorator';
+import { ArtistStatus } from '../artists/entities/artist.entity';
 
 @ApiTags('search')
 @Controller('search')
@@ -35,6 +36,11 @@ export class SearchController {
   @ApiQuery({ name: 'q', required: false, description: 'Search query' })
   @ApiQuery({ name: 'type', required: false, enum: ['artist', 'track'], description: 'Limit to artist or track' })
   @ApiQuery({ name: 'genre', required: false, description: 'Filter by genre' })
+  @ApiQuery({ name: 'status', required: false, enum: ArtistStatus, description: 'Artist status filter' })
+  @ApiQuery({ name: 'country', required: false, description: 'Artist country filter (ISO alpha-2)' })
+  @ApiQuery({ name: 'city', required: false, description: 'Artist city filter (partial, case-insensitive)' })
+  @ApiQuery({ name: 'hasLocation', required: false, type: Boolean, description: 'Only artists with public location' })
+  @ApiQuery({ name: 'isVerified', required: false, type: Boolean, description: 'Only verified artists' })
   @ApiQuery({ name: 'releaseDateFrom', required: false, description: 'Release date from (YYYY-MM-DD)' })
   @ApiQuery({ name: 'releaseDateTo', required: false, description: 'Release date to (YYYY-MM-DD)' })
   @ApiQuery({ name: 'sort', required: false, enum: ['relevance', 'recent', 'popular', 'alphabetical', 'popular_tips', 'popular_plays'] })

@@ -27,6 +27,7 @@ import { BlocksModule } from "./blocks/blocks.module";
 import { VersionsModule } from "./versions/versions.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { HealthModule } from "./health/health.module";
+import { VersionModule } from "./version/version.module";
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { HealthModule } from "./health/health.module";
     BlocksModule,
     VersionsModule,
     HealthModule,
+    VersionModule,
   ],
   controllers: [],
   providers: [],

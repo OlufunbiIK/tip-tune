@@ -1,4 +1,4 @@
-import { Inject, Optional, Controller, Get } from '@nestjs/common';
+import { Inject, Optional, Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   HealthCheck,
@@ -13,7 +13,7 @@ import { statfsSync } from 'fs';
 import { REDIS_CLIENT } from '../leaderboards/redis.module';
 import { StellarHealthIndicator } from './stellar-health.indicator';
 
-@Controller()
+@Controller({ version: VERSION_NEUTRAL })
 export class HealthController {
   constructor(
     private readonly healthCheckService: HealthCheckService,

@@ -3,12 +3,14 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   Unique,
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { AppBaseEntity } from '../../common/entities/base.entity';
 
 export enum FollowingType {
   ARTIST = 'artist',
@@ -20,7 +22,7 @@ export enum FollowingType {
 @Index(['followerId', 'followingType'])
 @Index(['followingId', 'followingType'])
 @Index(['createdAt'])
-export class Follow {
+export class Follow extends AppBaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -45,4 +47,7 @@ export class Follow {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

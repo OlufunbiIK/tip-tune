@@ -3,10 +3,12 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   Index,
 } from 'typeorm';
+import { AppBaseEntity } from '../common/entities/base.entity';
 
 export enum PlaySource {
   SEARCH = 'search',
@@ -20,7 +22,7 @@ export enum PlaySource {
 @Index(['trackId', 'userId', 'playedAt'])
 @Index(['trackId', 'sessionId', 'playedAt'])
 @Index(['ipHash', 'trackId', 'playedAt'])
-export class TrackPlay {
+export class TrackPlay extends AppBaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -56,4 +58,8 @@ export class TrackPlay {
 
   @CreateDateColumn({ name: 'played_at' })
   playedAt: Date;
+
+  // Track plays are append-only in normal flow; this exists to standardize audit columns.
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

@@ -32,7 +32,7 @@ cp .env.example .env
 
 3. Update `.env` with your configuration:
 ```env
-VITE_API_BASE_URL=http://localhost:3001/api
+VITE_API_BASE_URL=http://localhost:3001/api/v1
 VITE_STELLAR_NETWORK=testnet
 VITE_STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
 ```
@@ -103,7 +103,7 @@ frontend/
 ## API Integration
 
 The frontend is configured to proxy API requests to the backend:
-- API base URL: `http://localhost:3001/api`
+- API base URL: `http://localhost:3001/api/v1`
 - All `/api/*` requests are proxied to the backend
 
 ## Stellar Integration
