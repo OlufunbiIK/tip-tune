@@ -24,6 +24,7 @@ import { FeesModule } from "./fees/fees.module";
 import { ModerationModule } from "./moderation/moderation.module";
 import { EventsModule } from "./events/events.module";
 import { BlocksModule } from "./blocks/blocks.module";
+import { VersionsModule } from "./versions/versions.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { BlocksModule } from "./blocks/blocks.module";
     ModerationModule,
     EventsModule,
     BlocksModule,
+    VersionsModule,
   ],
   controllers: [],
   providers: [],
