@@ -25,6 +25,7 @@ import { ModerationModule } from "./moderation/moderation.module";
 import { EventsModule } from "./events/events.module";
 import { BlocksModule } from "./blocks/blocks.module";
 import { VersionsModule } from "./versions/versions.module";
+import { ArtistStatusModule } from "./artist-status/artist-status.module";
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { VersionsModule } from "./versions/versions.module";
     EventsModule,
     BlocksModule,
     VersionsModule,
+    ArtistStatusModule,
   ],
   controllers: [],
   providers: [],

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Artist } from '../artists/entities/artist.entity';
 import { Track } from '../tracks/entities/track.entity';
+import { ArtistStatus } from '../artist-status/entities/artist-status.entity';
 import {
   SearchQueryDto,
   SearchType,
@@ -52,6 +53,8 @@ export class SearchService {
     private readonly artistRepo: Repository<Artist>,
     @InjectRepository(Track)
     private readonly trackRepo: Repository<Track>,
+    @InjectRepository(ArtistStatus)
+    private readonly statusRepo: Repository<ArtistStatus>,
   ) {}
 
   async search(dto: SearchQueryDto): Promise<SearchResult> {
@@ -77,7 +80,11 @@ export class SearchService {
 
     const qb = this.artistRepo
       .createQueryBuilder('artist')
-      .select(['artist']);
+      .leftJoinAndSelect(
+        'artist.artistStatus',
+        'status',
+        'status.showOnProfile = true',
+      );
 
     if (hasQuery) {
       if (tsQuery) {
@@ -154,7 +161,11 @@ export class SearchService {
     const qb = this.trackRepo
       .createQueryBuilder('track')
       .leftJoinAndSelect('track.artist', 'artist')
-      .select(['track', 'artist']);
+      .leftJoinAndSelect(
+        'artist.artistStatus',
+        'status',
+        'status.showOnProfile = true',
+      );
 
     if (hasQuery) {
       if (tsQuery) {
