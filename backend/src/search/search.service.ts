@@ -69,7 +69,17 @@ export class SearchService {
   }
 
   private async searchArtists(dto: SearchQueryDto): Promise<PaginatedResult<Artist>> {
-    const { page = 1, limit = 10, sort = 'relevance', genre } = dto;
+    const {
+      page = 1,
+      limit = 10,
+      sort = 'relevance',
+      genre,
+      status,
+      country,
+      city,
+      hasLocation,
+      isVerified,
+    } = dto;
     const skip = (page - 1) * limit;
     const q = dto.q ? sanitizeQuery(dto.q) : '';
     const tsQuery = dto.q ? toTsQueryString(dto.q) : '';
@@ -97,6 +107,21 @@ export class SearchService {
 
     if (genre) {
       qb.andWhere('artist.genre ILIKE :genre', { genre: `%${genre}%` });
+    }
+    if (status) {
+      qb.andWhere('artist.status = :status', { status });
+    }
+    if (country) {
+      qb.andWhere('UPPER(artist.country) = UPPER(:country)', { country });
+    }
+    if (city) {
+      qb.andWhere('artist.city ILIKE :city', { city: `%${city}%` });
+    }
+    if (hasLocation === true) {
+      qb.andWhere('artist.hasLocation = :hasLocation', { hasLocation: true });
+    }
+    if (isVerified === true) {
+      qb.andWhere('artist.isVerified = :isVerified', { isVerified: true });
     }
 
     switch (sort as SortOption) {

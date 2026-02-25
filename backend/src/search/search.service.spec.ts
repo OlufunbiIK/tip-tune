@@ -6,6 +6,7 @@ import { Artist } from '../artists/entities/artist.entity';
 import { Track } from '../tracks/entities/track.entity';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { SearchSuggestionsQueryDto } from './dto/search-suggestions-query.dto';
+import { ArtistStatus } from '../artists/entities/artist.entity';
 
 function createMockQueryBuilder(getManyAndCountResult: [any[], number]) {
   const chain = {
@@ -164,6 +165,41 @@ describe('SearchService', () => {
         'track.genre ILIKE :genre',
         expect.objectContaining({ genre: expect.any(String) }),
       );
+    });
+
+    it('should apply artist status/location/verification filters composably', async () => {
+      const qb = createMockQueryBuilder([[mockArtist], 1]);
+      jest.spyOn(artistRepo, 'createQueryBuilder').mockReturnValue(qb as any);
+      jest.spyOn(trackRepo, 'createQueryBuilder').mockReturnValue(
+        createMockQueryBuilder([[], 0]) as any,
+      );
+
+      const dto: SearchQueryDto = {
+        type: 'artist',
+        status: ArtistStatus.ACCEPTING_REQUESTS,
+        country: 'NG',
+        city: 'Lagos',
+        hasLocation: true,
+        isVerified: true,
+      };
+
+      await service.search(dto);
+
+      expect(qb.andWhere).toHaveBeenCalledWith('artist.status = :status', {
+        status: ArtistStatus.ACCEPTING_REQUESTS,
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('UPPER(artist.country) = UPPER(:country)', {
+        country: 'NG',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('artist.city ILIKE :city', {
+        city: '%Lagos%',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('artist.hasLocation = :hasLocation', {
+        hasLocation: true,
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('artist.isVerified = :isVerified', {
+        isVerified: true,
+      });
     });
   });
 
