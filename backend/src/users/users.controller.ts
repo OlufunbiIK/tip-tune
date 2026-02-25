@@ -103,13 +103,36 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a user' })
+  @ApiOperation({ summary: 'Soft delete a user (authenticated user only)' })
   @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({ status: 204, description: 'User deleted successfully' })
+  @ApiResponse({ status: 204, description: 'User soft-deleted successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request - Invalid UUID format' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.usersService.remove(id);
+  }
+
+  // Admin only
+  @Delete(':id/hard')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Hard delete a user (admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
+  @ApiResponse({ status: 204, description: 'User hard-deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async hardDelete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    // TODO: Add admin guard
+    return this.usersService.hardDelete(id);
+  }
+
+  // Admin only
+  @Post(':id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted user (admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
+  @ApiResponse({ status: 200, description: 'User restored successfully', type: User })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async restore(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
+    // TODO: Add admin guard
+    return this.usersService.restore(id);
   }
 }
 

@@ -1,3 +1,8 @@
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt: Date;
+
+  @Column({ default: false, name: 'is_deleted' })
+  isDeleted: boolean;
 import {
   Entity,
   PrimaryGeneratedColumn,
