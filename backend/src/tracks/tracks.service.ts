@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Track } from './entities/track.entity';
@@ -11,13 +13,7 @@ import { TrackUploadedEvent } from './events/track-uploaded.event';
 import { TrackPlayedEvent } from './events/track-played.event';
 import { LicensingService } from "@/track-listening-right-management/licensing.service";
 
-interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+
 
 @Injectable()
 export class TracksService {

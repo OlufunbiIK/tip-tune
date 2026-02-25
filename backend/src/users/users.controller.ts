@@ -38,9 +38,11 @@ export class UsersController {
 
   @Get()
   @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: 200, description: 'List of all users', type: [User] })
-  findAll(): Promise<User[]> {
-    return this.usersService.findAll();
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 20, max: 100)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of users', schema: { example: { data: [{ /* user fields */ }], meta: { total: 120, page: 2, limit: 20, totalPages: 6, hasNextPage: true, hasPreviousPage: true } } } })
+  findAll(@Query('page') page = 1, @Query('limit') limit = 20): Promise<any> {
+    return this.usersService.findAll(Number(page), Number(limit));
   }
 
   @Get('artists')

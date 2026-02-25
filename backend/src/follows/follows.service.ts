@@ -11,10 +11,10 @@ import { Follow, FollowingType } from './entities/follow.entity';
 import { Artist } from '../artists/entities/artist.entity';
 import { User } from '../users/entities/user.entity';
 import { ArtistsService } from '../artists/artists.service';
-import {
   FollowPaginationQueryDto,
-  PaginatedFollowResponseDto,
 } from './dto/pagination.dto';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserFollowedEvent } from './events/user-followed.event';
 

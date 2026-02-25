@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger, BadRequestException } from '@nestjs/common';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -58,10 +60,15 @@ export class UsersService {
     }
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find({
+  async findAll(page = 1, limit = 20): Promise<PaginatedResponse<User>> {
+    const take = Math.max(1, Math.min(limit, 100));
+    const skip = (Math.max(1, page) - 1) * take;
+    const [users, total] = await this.usersRepository.findAndCount({
       order: { createdAt: 'DESC' },
+      skip,
+      take,
     });
+    return paginate(users, { page, limit: take, total });
   }
 
   async findOne(id: string): Promise<User> {

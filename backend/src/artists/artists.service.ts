@@ -31,8 +31,14 @@ export class ArtistsService {
     return this.artistRepo.save(artist);
   }
 
-  findAll(): Promise<Artist[]> {
-    return this.artistRepo.find();
+  async findAll(page = 1, limit = 20): Promise<PaginatedResponse<Artist>> {
+    const take = Math.max(1, Math.min(limit, 100));
+    const skip = (Math.max(1, page) - 1) * take;
+    const [artists, total] = await this.artistRepo.findAndCount({
+      skip,
+      take,
+    });
+    return paginate(artists, { page, limit: take, total });
   }
 
   async findOne(id: string): Promise<Artist> {

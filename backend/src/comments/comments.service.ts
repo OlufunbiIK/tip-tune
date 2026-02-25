@@ -13,6 +13,8 @@ import {
   UpdateCommentDto,
   PaginationQueryDto,
 } from "./comment.dto";
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { BlocksService } from "../blocks/blocks.service";
 
 @Injectable()
