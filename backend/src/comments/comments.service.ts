@@ -3,12 +3,17 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
-import { Comment } from './comment.entity';
-import { CommentLike } from './comment-like.entity';
-import { CreateCommentDto, UpdateCommentDto, PaginationQueryDto } from './comment.dto';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Comment } from "./comment.entity";
+import { CommentLike } from "./comment-like.entity";
+import {
+  CreateCommentDto,
+  UpdateCommentDto,
+  PaginationQueryDto,
+} from "./comment.dto";
+import { BlocksService } from "../blocks/blocks.service";
 
 @Injectable()
 export class CommentsService {
@@ -17,25 +22,31 @@ export class CommentsService {
     private commentRepository: Repository<Comment>,
     @InjectRepository(CommentLike)
     private commentLikeRepository: Repository<CommentLike>,
+    private readonly blocksService: BlocksService,
   ) {}
 
-  async create(createCommentDto: CreateCommentDto, userId: string): Promise<Comment> {
+  async create(
+    createCommentDto: CreateCommentDto,
+    userId: string,
+  ): Promise<Comment> {
     const { trackId, content, parentCommentId } = createCommentDto;
 
     // If it's a reply, validate parent comment exists and check nesting level
     if (parentCommentId) {
       const parentComment = await this.commentRepository.findOne({
         where: { id: parentCommentId },
-        relations: ['parentComment'],
+        relations: ["parentComment"],
       });
 
       if (!parentComment) {
-        throw new NotFoundException('Parent comment not found');
+        throw new NotFoundException("Parent comment not found");
       }
 
       // Check if parent is already a reply (enforce 2-level limit)
       if (parentComment.parentCommentId) {
-        throw new BadRequestException('Cannot reply to a reply. Maximum nesting level is 2.');
+        throw new BadRequestException(
+          "Cannot reply to a reply. Maximum nesting level is 2.",
+        );
       }
     }
 
@@ -53,30 +64,59 @@ export class CommentsService {
     trackId: string,
     query: PaginationQueryDto,
     userId?: string,
-  ): Promise<{ comments: Comment[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    comments: Comment[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    // Get top-level comments only (no parent)
-    const [comments, total] = await this.commentRepository.findAndCount({
-      where: {
-        trackId,
-        parentCommentId: IsNull(),
-      },
-      relations: ['user', 'replies', 'replies.user', 'likes'],
-      order: {
-        createdAt: 'DESC',
-        replies: {
-          createdAt: 'ASC',
-        },
-      },
-      skip,
-      take: limit,
-    });
+    // Get blocked user IDs to filter out their comments (if viewing as artist)
+    let blockedUserIds: string[] = [];
+    if (userId) {
+      blockedUserIds = await this.blocksService.getBlockedUserIds(userId);
+    }
+
+    // Build query to get top-level comments, excluding blocked users
+    const queryBuilder = this.commentRepository
+      .createQueryBuilder("comment")
+      .leftJoinAndSelect("comment.user", "user")
+      .leftJoinAndSelect("comment.replies", "replies")
+      .leftJoinAndSelect("replies.user", "replyUser")
+      .leftJoinAndSelect("comment.likes", "likes")
+      .where("comment.trackId = :trackId", { trackId })
+      .andWhere("comment.parentCommentId IS NULL")
+      .orderBy("comment.createdAt", "DESC")
+      .addOrderBy("replies.createdAt", "ASC")
+      .skip(skip)
+      .take(limit);
+
+    // Exclude comments from blocked users
+    if (blockedUserIds.length > 0) {
+      queryBuilder.andWhere("comment.userId NOT IN (:...blockedUserIds)", {
+        blockedUserIds,
+      });
+    }
+
+    const [comments, total] = await queryBuilder.getManyAndCount();
+
+    // Filter out replies from blocked users
+    const filteredComments = comments.map((comment) => ({
+      ...comment,
+      replies:
+        comment.replies?.filter(
+          (reply) => !blockedUserIds.includes(reply.userId),
+        ) || [],
+    })) as Comment[];
 
     // Add userLiked flag if userId is provided
-    const commentsWithLikeStatus = await this.addUserLikedStatus(comments, userId);
+    const commentsWithLikeStatus = await this.addUserLikedStatus(
+      filteredComments,
+      userId,
+    );
 
     return {
       comments: commentsWithLikeStatus,
@@ -89,26 +129,33 @@ export class CommentsService {
   async findOne(id: string, userId?: string): Promise<Comment> {
     const comment = await this.commentRepository.findOne({
       where: { id },
-      relations: ['user', 'replies', 'replies.user', 'likes'],
+      relations: ["user", "replies", "replies.user", "likes"],
     });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
-    const [commentWithStatus] = await this.addUserLikedStatus([comment], userId);
+    const [commentWithStatus] = await this.addUserLikedStatus(
+      [comment],
+      userId,
+    );
     return commentWithStatus;
   }
 
-  async update(id: string, updateCommentDto: UpdateCommentDto, userId: string): Promise<Comment> {
+  async update(
+    id: string,
+    updateCommentDto: UpdateCommentDto,
+    userId: string,
+  ): Promise<Comment> {
     const comment = await this.commentRepository.findOne({ where: { id } });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
     if (comment.userId !== userId) {
-      throw new ForbiddenException('You can only edit your own comments');
+      throw new ForbiddenException("You can only edit your own comments");
     }
 
     comment.content = updateCommentDto.content;
@@ -121,21 +168,23 @@ export class CommentsService {
     const comment = await this.commentRepository.findOne({ where: { id } });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
     if (comment.userId !== userId) {
-      throw new ForbiddenException('You can only delete your own comments');
+      throw new ForbiddenException("You can only delete your own comments");
     }
 
     await this.commentRepository.remove(comment);
   }
 
   async likeComment(commentId: string, userId: string): Promise<Comment> {
-    const comment = await this.commentRepository.findOne({ where: { id: commentId } });
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
     // Check if already liked
@@ -144,7 +193,7 @@ export class CommentsService {
     });
 
     if (existingLike) {
-      throw new BadRequestException('Comment already liked');
+      throw new BadRequestException("Comment already liked");
     }
 
     // Create like
@@ -159,10 +208,12 @@ export class CommentsService {
   }
 
   async unlikeComment(commentId: string, userId: string): Promise<Comment> {
-    const comment = await this.commentRepository.findOne({ where: { id: commentId } });
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
     const like = await this.commentLikeRepository.findOne({
@@ -170,7 +221,7 @@ export class CommentsService {
     });
 
     if (!like) {
-      throw new BadRequestException('Comment not liked');
+      throw new BadRequestException("Comment not liked");
     }
 
     await this.commentLikeRepository.remove(like);
@@ -182,12 +233,18 @@ export class CommentsService {
     return await this.findOne(commentId, userId);
   }
 
-  private async addUserLikedStatus(comments: Comment[], userId?: string): Promise<Comment[]> {
+  private async addUserLikedStatus(
+    comments: Comment[],
+    userId?: string,
+  ): Promise<Comment[]> {
     if (!userId) {
       return comments.map((comment) => ({
         ...comment,
         userLiked: false,
-        replies: comment.replies?.map((reply) => ({ ...reply, userLiked: false })),
+        replies: comment.replies?.map((reply) => ({
+          ...reply,
+          userLiked: false,
+        })),
       })) as Comment[];
     }
 

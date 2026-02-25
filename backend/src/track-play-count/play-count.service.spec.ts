@@ -338,7 +338,7 @@ describe('PlayCountService', () => {
 
     it('calculates skip rate correctly', async () => {
       // totalEvents=10, totalPlays(counted)=6 → skipRate=0.4
-      let callCount = 0;
+      const callCount = 0;
       const qb = mockQbChain();
       qb.clone.mockReturnValue(qb);
       qb.getCount
