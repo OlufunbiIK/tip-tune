@@ -6,9 +6,11 @@ import {
   IsDateString,
   Min,
   Max,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ArtistStatus } from '../../artists/entities/artist.entity';
 
 export const SEARCH_TYPES = ['artist', 'track'] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
@@ -48,6 +50,49 @@ export class SearchQueryDto {
   @IsOptional()
   @IsString()
   genre?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter artists by status',
+    enum: ArtistStatus,
+    example: ArtistStatus.ACCEPTING_REQUESTS,
+  })
+  @IsOptional()
+  @IsIn(Object.values(ArtistStatus))
+  status?: ArtistStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filter artists by country (ISO 3166-1 alpha-2 code)',
+    example: 'NG',
+  })
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter artists by city (partial case-insensitive match)',
+    example: 'Lagos',
+  })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({
+    description: 'Only return artists with public location set',
+    example: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  hasLocation?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Only return verified artists',
+    example: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isVerified?: boolean;
 
   @ApiPropertyOptional({
     description: 'Release date from (YYYY-MM-DD)',

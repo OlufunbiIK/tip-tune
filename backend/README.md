@@ -68,36 +68,37 @@ npm run start:prod
 ### API Documentation
 
 Once running, visit `http://localhost:3001/api/docs` for interactive API documentation.
+API routes are versioned under `/api/v1/*` (except health probes and `/api/version`).
 
 ## API Endpoints
 
 ### File Storage
 
-- `POST /api/files/upload` - Upload audio file
-- `GET /api/files/:filename` - Download file
-- `GET /api/files/:filename/stream` - Stream audio file
-- `GET /api/files/:filename/info` - Get file information
-- `DELETE /api/files/:filename` - Delete file
+- `POST /api/v1/files/upload` - Upload audio file
+- `GET /api/v1/files/:filename` - Download file
+- `GET /api/v1/files/:filename/stream` - Stream audio file
+- `GET /api/v1/files/:filename/info` - Get file information
+- `DELETE /api/v1/files/:filename` - Delete file
 
 ### Search
 
-- `GET /api/search?q=...&type=artist|track&genre=...&sort=...&page=...&limit=...` - Full-text search (artists/tracks, filters, sort, pagination)
-- `GET /api/search/suggestions?q=partial` - Autocomplete suggestions
+- `GET /api/v1/search?q=...&type=artist|track&genre=...&sort=...&page=...&limit=...` - Full-text search (artists/tracks, filters, sort, pagination)
+- `GET /api/v1/search/suggestions?q=partial` - Autocomplete suggestions
 
 See `src/search/README.md` for details.
 
 ### Tracks
 
-- `POST /api/tracks` - Create track with file upload
-- `GET /api/tracks` - Get all tracks
-- `GET /api/tracks/public` - Get public tracks only
-- `GET /api/tracks/search?q=query` - Search tracks
-- `GET /api/tracks/artist/:artist` - Get tracks by artist
-- `GET /api/tracks/genre/:genre` - Get tracks by genre
-- `GET /api/tracks/:id` - Get track by ID
-- `PATCH /api/tracks/:id` - Update track
-- `PATCH /api/tracks/:id/play` - Increment play count
-- `DELETE /api/tracks/:id` - Delete track
+- `POST /api/v1/tracks` - Create track with file upload
+- `GET /api/v1/tracks` - Get all tracks
+- `GET /api/v1/tracks/public` - Get public tracks only
+- `GET /api/v1/tracks/search?q=query` - Search tracks
+- `GET /api/v1/tracks/artist/:artist` - Get tracks by artist
+- `GET /api/v1/tracks/genre/:genre` - Get tracks by genre
+- `GET /api/v1/tracks/:id` - Get track by ID
+- `PATCH /api/v1/tracks/:id` - Update track
+- `PATCH /api/v1/tracks/:id/play` - Increment play count
+- `DELETE /api/v1/tracks/:id` - Delete track
 
 ## File Upload
 

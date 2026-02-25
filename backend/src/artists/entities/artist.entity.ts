@@ -19,6 +19,15 @@ import { Tip } from "../../tips/entities/tip.entity";
 import { Collaboration } from "../../collaboration/entities/collaboration.entity";
 import { ArtistStatus } from "../../artist-status/entities/artist-status.entity";
 
+export enum ArtistStatus {
+  ACTIVE = "active",
+  ON_TOUR = "on_tour",
+  RECORDING = "recording",
+  ON_BREAK = "on_break",
+  HIATUS = "hiatus",
+  ACCEPTING_REQUESTS = "accepting_requests",
+}
+
 @Entity("artists")
 export class Artist {
   @PrimaryGeneratedColumn("uuid")
@@ -63,6 +72,22 @@ export class Artist {
 
   @Column({ type: "boolean", default: false })
   isVerified: boolean;
+
+  @Column({
+    type: "enum",
+    enum: ArtistStatus,
+    default: ArtistStatus.ACTIVE,
+  })
+  status: ArtistStatus;
+
+  @Column({ length: 2, nullable: true })
+  country?: string;
+
+  @Column({ nullable: true })
+  city?: string;
+
+  @Column({ default: false })
+  hasLocation: boolean;
 
   @Column({ type: "decimal", precision: 18, scale: 2, default: 0 })
   totalTipsReceived: string;
