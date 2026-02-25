@@ -1,6 +1,7 @@
 import { IsString, IsUUID, IsOptional, IsBoolean, IsNumber, MaxLength, Min, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TipType } from '../entities/tip.entity';
+import { SanitiseAsPlainText } from '../../common/utils/sanitise.util';
 
 export { TipType };
 
@@ -37,6 +38,7 @@ export class CreateTipDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @SanitiseAsPlainText()
   message?: string;
 
   @ApiPropertyOptional({

@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText, SanitiseAsRichText } from '../../common/utils/sanitise.util';
 
 export class CreatePlaylistDto {
   @ApiProperty({
@@ -16,6 +17,7 @@ export class CreatePlaylistDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
+  @SanitiseAsPlainText()
   name: string;
 
   @ApiPropertyOptional({
@@ -24,6 +26,7 @@ export class CreatePlaylistDto {
   })
   @IsOptional()
   @IsString()
+  @SanitiseAsRichText()
   description?: string;
 
   @ApiPropertyOptional({
