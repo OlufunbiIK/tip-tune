@@ -85,7 +85,41 @@ impl TimeLockContract {
         lock_id: String,
         artist: Address,
     ) -> Result<i128, Error> {
-        Err(Error::Unauthorized)
+        artist.require_auth();
+
+        let mut tip = storage::get_tip(&env, lock_id).ok_or(Error::LockNotFound)?;
+
+        if tip.artist != artist {
+            return Err(Error::Unauthorized);
+        }
+
+        if tip.status != TimeLockStatus::Locked {
+            return Err(Error::AlreadyClaimedOrRefunded);
+        }
+
+        let current_time = env.ledger().timestamp();
+        if current_time < tip.unlock_time {
+            return Err(Error::NotUnlockedYet);
+        }
+
+        tip.status = TimeLockStatus::Claimed;
+        storage::update_tip(&env, &tip);
+
+        // Transfer funds to artist
+        match &tip.asset {
+            Asset::Token(token_address) => {
+                let token_client = token::Client::new(&env, token_address);
+                token_client.transfer(&env.current_contract_address(), &artist, &tip.amount);
+            }
+        }
+
+        // Emit event
+        env.events().publish(
+            (symbol_short!("tip_claim"), tip.tipper.clone(), tip.artist.clone()),
+            tip.clone(),
+        );
+
+        Ok(tip.amount)
     }
 
     pub fn refund_tip(
@@ -93,7 +127,43 @@ impl TimeLockContract {
         lock_id: String,
         tipper: Address,
     ) -> Result<(), Error> {
-        Err(Error::Unauthorized)
+        tipper.require_auth();
+
+        let mut tip = storage::get_tip(&env, lock_id).ok_or(Error::LockNotFound)?;
+
+        if tip.tipper != tipper {
+            return Err(Error::Unauthorized);
+        }
+
+        if tip.status != TimeLockStatus::Locked {
+            return Err(Error::AlreadyClaimedOrRefunded);
+        }
+
+        let current_time = env.ledger().timestamp();
+        // Refund available 30 days after unlock_time
+        let refund_delay = 30 * 24 * 60 * 60; // 30 days in seconds
+        if current_time < tip.unlock_time + refund_delay {
+            return Err(Error::RefundNotAvailableYet);
+        }
+
+        tip.status = TimeLockStatus::Refunded;
+        storage::update_tip(&env, &tip);
+
+        // Transfer funds back to tipper
+        match &tip.asset {
+            Asset::Token(token_address) => {
+                let token_client = token::Client::new(&env, token_address);
+                token_client.transfer(&env.current_contract_address(), &tipper, &tip.amount);
+            }
+        }
+
+        // Emit event
+        env.events().publish(
+            (symbol_short!("tip_rfnd"), tip.tipper.clone(), tip.artist.clone()),
+            tip.clone(),
+        );
+
+        Ok(())
     }
 
     pub fn get_pending_tips(
