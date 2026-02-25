@@ -156,7 +156,8 @@ npm run test -- waveform.service.spec.ts
 ```typescript
 // Fetch waveform with track
 const response = await fetch(`/api/tracks/${trackId}`);
-const { track, waveform } = await response.json();
+const data = await response.json();
+const { waveform, ...track } = data;
 
 // Render waveform
 if (waveform?.waveformData) {

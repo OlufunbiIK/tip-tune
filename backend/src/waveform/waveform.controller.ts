@@ -1,10 +1,14 @@
-import { Controller, Get, Post, Param, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, NotFoundException, UseGuards, InternalServerErrorException } from '@nestjs/common';
 import { WaveformService } from './waveform.service';
 import { TrackWaveform } from './entities/track-waveform.entity';
+import { TracksService } from '../tracks/tracks.service';
 
 @Controller('api/waveform')
 export class WaveformController {
-  constructor(private readonly waveformService: WaveformService) {}
+  constructor(
+    private readonly waveformService: WaveformService,
+    private readonly tracksService: TracksService,
+  ) {}
 
   @Get(':trackId')
   async getWaveform(@Param('trackId') trackId: string): Promise<TrackWaveform> {
@@ -18,8 +22,19 @@ export class WaveformController {
 
   @Post(':trackId/regenerate')
   async regenerate(@Param('trackId') trackId: string): Promise<{ message: string }> {
-    // Note: In production, you'd need to fetch the audio file path from the Track entity
-    // This is a simplified version - integrate with your tracks service
-    throw new NotFoundException('Regeneration requires track audio file path - integrate with tracks service');
+    const track = await this.tracksService.findOne(trackId);
+    
+    if (!track.audioUrl && !track.filename) {
+      throw new NotFoundException('Track audio file not found');
+    }
+
+    const audioPath = track.filename || track.audioUrl;
+
+    try {
+      await this.waveformService.regenerate(trackId, audioPath);
+      return { message: 'Waveform regeneration started' };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to regenerate waveform');
+    }
   }
 }

@@ -21,6 +21,7 @@ export class CreateTrackWaveforms1740459181000 implements MigrationInterface {
           {
             name: 'waveformData',
             type: 'jsonb',
+            default: "'[]'",
           },
           {
             name: 'dataPoints',
@@ -32,6 +33,7 @@ export class CreateTrackWaveforms1740459181000 implements MigrationInterface {
             type: 'decimal',
             precision: 10,
             scale: 6,
+            default: 0,
           },
           {
             name: 'generationStatus',
@@ -77,8 +79,12 @@ export class CreateTrackWaveforms1740459181000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const table = await queryRunner.getTable('track_waveforms');
-    const foreignKey = table.foreignKeys.find(fk => fk.columnNames.indexOf('trackId') !== -1);
-    await queryRunner.dropForeignKey('track_waveforms', foreignKey);
-    await queryRunner.dropTable('track_waveforms');
+    if (table) {
+      const foreignKey = table.foreignKeys.find(fk => fk.columnNames.indexOf('trackId') !== -1);
+      if (foreignKey) {
+        await queryRunner.dropForeignKey('track_waveforms', foreignKey);
+      }
+      await queryRunner.dropTable('track_waveforms');
+    }
   }
 }

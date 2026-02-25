@@ -1,3 +1,5 @@
+import { GenerationStatus } from '../entities/track-waveform.entity';
+
 export class CreateWaveformDto {
   trackId: string;
   dataPoints?: number;
@@ -9,7 +11,7 @@ export class WaveformResponseDto {
   waveformData: number[];
   dataPoints: number;
   peakAmplitude: number;
-  generationStatus: string;
+  generationStatus: GenerationStatus;
   processingDurationMs?: number;
   createdAt: Date;
   updatedAt: Date;

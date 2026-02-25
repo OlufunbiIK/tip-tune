@@ -73,11 +73,17 @@ describe('WaveformService', () => {
 
       mockRepository.findOne.mockResolvedValue(null);
       mockRepository.create.mockReturnValue({ trackId, dataPoints: 200, retryCount: 0 });
-      mockRepository.save.mockResolvedValue({ trackId, retryCount: 1 });
+      mockRepository.save.mockImplementation((entity) => Promise.resolve({ ...entity }));
       mockGenerator.generateWaveform.mockRejectedValue(new Error('Generation failed'));
 
       await expect(service.generateForTrack(trackId, audioPath)).rejects.toThrow('Generation failed');
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockRepository.save).toHaveBeenCalledTimes(2);
+      expect(mockRepository.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ 
+          retryCount: 1,
+          generationStatus: GenerationStatus.PENDING
+        })
+      );
     });
   });
 

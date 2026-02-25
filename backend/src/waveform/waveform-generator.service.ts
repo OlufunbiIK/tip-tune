@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 @Injectable()
 export class WaveformGeneratorService {
@@ -15,16 +15,19 @@ export class WaveformGeneratorService {
 
     try {
       // Generate waveform using audiowaveform CLI
-      await execAsync(
-        `audiowaveform -i "${audioFilePath}" -o "${tempJsonPath}" --pixels-per-second 20 --bits 8`
-      );
+      await execFileAsync('audiowaveform', [
+        '-i', audioFilePath,
+        '-o', tempJsonPath,
+        '--pixels-per-second', '20',
+        '--bits', '8'
+      ]);
 
       const jsonData = await fs.readFile(tempJsonPath, 'utf-8');
       const waveformJson = JSON.parse(jsonData);
       
       // Extract amplitude data
       const rawData = waveformJson.data || [];
-      const peakAmplitude = Math.max(...rawData);
+      const peakAmplitude = rawData.length > 0 ? Math.max(...rawData) : 1;
       
       // Normalize and resample to desired data points
       const normalized = this.normalizeAndResample(rawData, dataPoints, peakAmplitude);
@@ -33,7 +36,7 @@ export class WaveformGeneratorService {
 
       return {
         waveformData: normalized,
-        peakAmplitude: peakAmplitude || 1,
+        peakAmplitude,
       };
     } catch (error) {
       await fs.unlink(tempJsonPath).catch(() => {});
@@ -53,7 +56,7 @@ export class WaveformGeneratorService {
       const start = Math.floor(i * step);
       const end = Math.floor((i + 1) * step);
       const slice = data.slice(start, end);
-      const avg = slice.reduce((sum, val) => sum + val, 0) / slice.length;
+      const avg = slice.length > 0 ? slice.reduce((sum, val) => sum + val, 0) / slice.length : 0;
       result.push(Math.min(1, avg / peak));
     }
 

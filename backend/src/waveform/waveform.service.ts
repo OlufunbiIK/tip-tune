@@ -18,19 +18,16 @@ export class WaveformService {
   async generateForTrack(trackId: string, audioFilePath: string, dataPoints: number = 200): Promise<TrackWaveform> {
     const startTime = Date.now();
     
-    let waveform = await this.waveformRepository.findOne({ where: { trackId } });
-    
-    if (!waveform) {
-      waveform = this.waveformRepository.create({
+    await this.waveformRepository.upsert(
+      {
         trackId,
         dataPoints,
         generationStatus: GenerationStatus.PROCESSING,
-      });
-    } else {
-      waveform.generationStatus = GenerationStatus.PROCESSING;
-    }
-
-    await this.waveformRepository.save(waveform);
+      },
+      ['trackId']
+    );
+    
+    let waveform = await this.waveformRepository.findOne({ where: { trackId } });
 
     try {
       const { waveformData, peakAmplitude } = await this.generatorService.generateWaveform(audioFilePath, dataPoints);
@@ -46,14 +43,19 @@ export class WaveformService {
       this.logger.error(`Waveform generation failed for track ${trackId}: ${error.message}`);
       
       waveform.retryCount = (waveform.retryCount || 0) + 1;
-      waveform.generationStatus = waveform.retryCount >= this.MAX_RETRIES 
+      waveform.generationStatus = waveform.retryCount > this.MAX_RETRIES 
         ? GenerationStatus.FAILED 
         : GenerationStatus.PENDING;
       
       await this.waveformRepository.save(waveform);
 
-      if (waveform.retryCount < this.MAX_RETRIES) {
-        setTimeout(() => this.generateForTrack(trackId, audioFilePath, dataPoints), 5000 * waveform.retryCount);
+      if (waveform.retryCount <= this.MAX_RETRIES) {
+        // TODO: Replace with durable job queue (Bull/BullMQ)
+        setTimeout(() => {
+          this.generateForTrack(trackId, audioFilePath, dataPoints).catch(err => {
+            this.logger.error(`Retry failed for track ${trackId}: ${err.message}`);
+          });
+        }, 5000 * waveform.retryCount);
       }
 
       throw error;
