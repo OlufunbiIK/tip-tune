@@ -1,0 +1,7 @@
+[package]
+name = "track_access_control"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+soroban-sdk = "0.7.0"  # ensure latest Soroban SDK
