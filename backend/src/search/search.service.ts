@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Artist } from '../artists/entities/artist.entity';
@@ -13,13 +15,7 @@ import { SearchSuggestionsQueryDto } from './dto/search-suggestions-query.dto';
 const SIMILARITY_THRESHOLD = 0.1;
 const FUZZY_WEIGHT = 0.5;
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+
 
 export interface SearchResult {
   artists?: PaginatedResult<Artist>;

@@ -129,11 +129,23 @@ describe('UsersService', () => {
   });
 
   describe('findAll', () => {
-    it('should return an array of users', async () => {
+    it('should return paginated users', async () => {
       const users = [mockUser];
-      mockRepository.find.mockResolvedValue(users);
+      mockRepository.findAndCount.mockResolvedValue([users, 1]);
 
-      const result = await service.findAll();
+      const result = await service.findAll(1, 20);
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.meta).toMatchObject({
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
+    });
 
       expect(result).toEqual(users);
       expect(mockRepository.find).toHaveBeenCalledWith({

@@ -15,18 +15,8 @@ import { UsersService } from "../users/users.service";
 import { BlocksService } from "../blocks/blocks.service";
 import { MuteType } from "../blocks/entities/user-mute.entity";
 
-export interface PaginatedActivityResponse {
-  data: Activity[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    unseenCount: number;
-  };
-}
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 
 @Injectable()
 export class ActivitiesService {
