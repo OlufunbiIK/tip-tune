@@ -6,19 +6,25 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { SubscriptionTier } from './entities/subscription-tier.entity';
+import { Repository, DataSource, LessThanOrEqual } from 'typeorm';
+import { SubscriptionTier } from '../subscription-tiers/subscription-tier.entity';
 import {
   ArtistSubscription,
   SubscriptionStatus,
-} from './entities/artist-subscription.entity';
+} from '../subscription-tiers/artist-subscription.entity';
+import { SubscriptionRevenue } from '../subscription-tiers/SubscriptionRevenue.entity';
 import {
   CreateSubscriptionTierDto,
   UpdateSubscriptionTierDto,
   CreateArtistSubscriptionDto,
   SubscriptionQueryDto,
-} from './dto/subscriptions.dto';
-
+} from './subscriptions.dto';
+import { StellarService } from '../stellar/stellar.service';
+import { CronExpression } from '@nestjs/schedule/dist/enums/cron-expression.enum';
+import { Cron } from '@nestjs/schedule/dist/decorators/cron.decorator';
+// Add import for addMonths utility
+import { addMonths } from 'date-fns';
+import { SubscribeDto } from './SubscribeDto';
 @Injectable()
 export class SubscriptionsService {
   constructor(
@@ -27,6 +33,7 @@ export class SubscriptionsService {
     @InjectRepository(ArtistSubscription)
     private readonly subscriptionRepo: Repository<ArtistSubscription>,
     private readonly dataSource: DataSource,
+    private readonly stellarService: StellarService,
   ) {}
 
   // ─── Tier CRUD ──────────────────────────────────────────────────────────────
@@ -82,67 +89,6 @@ export class SubscriptionsService {
 
   // ─── Subscription Management ─────────────────────────────────────────────
 
-  async subscribe(
-    userId: string,
-    dto: CreateArtistSubscriptionDto,
-  ): Promise<ArtistSubscription> {
-    const tier = await this.getTierById(dto.tierId);
-
-    if (!tier.isActive) {
-      throw new BadRequestException('This subscription tier is no longer active');
-    }
-
-    // Enforce subscriber cap
-    if (
-      tier.maxSubscribers !== null &&
-      tier.currentSubscribers >= tier.maxSubscribers
-    ) {
-      throw new ConflictException(
-        `This tier has reached its maximum subscriber limit of ${tier.maxSubscribers}`,
-      );
-    }
-
-    // Check for existing active subscription to same tier
-    const existing = await this.subscriptionRepo.findOne({
-      where: {
-        userId,
-        tierId: dto.tierId,
-        status: SubscriptionStatus.ACTIVE,
-      },
-    });
-    if (existing) {
-      throw new ConflictException(
-        'You already have an active subscription to this tier',
-      );
-    }
-
-    const now = new Date();
-    const nextBillingDate = new Date(now);
-    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-
-    return this.dataSource.transaction(async (manager) => {
-      const subscription = manager.create(ArtistSubscription, {
-        userId,
-        artistId: tier.artistId,
-        tierId: dto.tierId,
-        stellarTxHash: dto.stellarTxHash,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: now,
-        nextBillingDate,
-      });
-      const saved = await manager.save(ArtistSubscription, subscription);
-
-      // Increment subscriber count
-      await manager.increment(
-        SubscriptionTier,
-        { id: dto.tierId },
-        'currentSubscribers',
-        1,
-      );
-
-      return saved;
-    });
-  }
 
   async cancelSubscription(
     subscriptionId: string,
@@ -307,4 +253,99 @@ export class SubscriptionsService {
     }
     return subscription;
   }
+
+  async subscribe(dto: SubscribeDto, userId: string) {
+  return this.dataSource.transaction(async manager => {
+
+    const tier = await manager.findOne(SubscriptionTier, {
+      where: { id: dto.tierId, isActive: true },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    if (!tier) throw new NotFoundException('Tier not found');
+
+    // Prevent duplicate active subscription (extra safety)
+    const existing = await manager.findOne(ArtistSubscription, {
+      where: {
+        userId,
+        artistId: tier.artistId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    if (existing)
+      throw new BadRequestException('Already subscribed');
+
+    // Cap enforcement
+    if (
+      tier.maxSubscribers &&
+      tier.currentSubscribers >= tier.maxSubscribers
+    ) {
+      throw new BadRequestException('Subscriber limit reached');
+    }
+
+    // Verify Stellar transaction
+    await this.stellarService.verifyTransaction(
+      dto.stellarTxHash,
+      tier.priceXLM.toString(),
+      tier.artistId,
+      'XLM',
+    );
+
+    const subscription = manager.create(ArtistSubscription, {
+      userId,
+      artistId: tier.artistId,
+      tierId: tier.id,
+      stellarTxHash: dto.stellarTxHash,
+      startDate: new Date(),
+      nextBillingDate: addMonths(new Date(), 1),
+    });
+
+    await manager.save(subscription);
+
+    // Increment safely
+    tier.currentSubscribers += 1;
+    await manager.save(tier);
+
+    // Create revenue record
+    await manager.save(SubscriptionRevenue, {
+      artistId: tier.artistId,
+      subscriptionId: subscription.id,
+      amountXLM: tier.priceXLM,
+      amountUSD: tier.priceUSD,
+      stellarTxHash: dto.stellarTxHash,
+    });
+
+    return subscription;
+  });
+}
+@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+async processBilling() {
+  const dueSubs = await this.subscriptionRepo.find({
+    where: {
+      status: SubscriptionStatus.ACTIVE,
+      nextBillingDate: LessThanOrEqual(new Date()),
+    },
+    relations: ['tier'],
+  });
+
+  for (const sub of dueSubs) {
+    try {
+      // await this.billingService.charge(sub);
+
+      sub.nextBillingDate = addMonths(new Date(), 1);
+      await this.subscriptionRepo.save(sub);
+
+    } catch (err) {
+      sub.status = SubscriptionStatus.EXPIRED;
+      await this.subscriptionRepo.save(sub);
+
+      await this.tierRepo.decrement(
+        { id: sub.tierId },
+        'currentSubscribers',
+        1,
+      );
+    }
+  }
+}
 }
