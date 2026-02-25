@@ -1,15 +1,23 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { NotificationsGateway } from "./notifications.gateway";
 import { Notification, NotificationType } from "./notification.entity";
+import { BlocksService } from "../blocks/blocks.service";
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
-    private readonly notificationsGateway: NotificationsGateway
+    private readonly notificationsGateway: NotificationsGateway,
+    @Inject(forwardRef(() => BlocksService))
+    private readonly blocksService: BlocksService,
   ) {}
 
   async create(createNotificationDto: {
@@ -18,7 +26,28 @@ export class NotificationsService {
     title: string;
     message: string;
     data?: any;
+    fromUserId?: string;
   }) {
+    // Check if the recipient has muted the sender (suppress notification)
+    if (createNotificationDto.fromUserId) {
+      const shouldSuppress =
+        await this.blocksService.shouldSuppressNotification(
+          createNotificationDto.userId,
+          createNotificationDto.fromUserId,
+        );
+      if (shouldSuppress) {
+        // Still save the notification but don't send real-time alert
+        const notification = this.notificationRepository.create({
+          userId: createNotificationDto.userId,
+          type: createNotificationDto.type,
+          title: createNotificationDto.title,
+          message: createNotificationDto.message,
+          data: createNotificationDto.data,
+        });
+        return this.notificationRepository.save(notification);
+      }
+    }
+
     const notification = this.notificationRepository.create({
       userId: createNotificationDto.userId,
       type: createNotificationDto.type,
@@ -35,7 +64,7 @@ export class NotificationsService {
       {
         ...savedNotification,
         type: createNotificationDto.type,
-      }
+      },
     );
 
     return savedNotification;
@@ -119,7 +148,7 @@ export class NotificationsService {
     if (this.notificationsGateway) {
       this.notificationsGateway.sendNotificationToArtist(
         data.artistId,
-        savedNotification
+        savedNotification,
       );
     }
 
@@ -146,7 +175,7 @@ export class NotificationsService {
     if (this.notificationsGateway) {
       this.notificationsGateway.sendNotificationToArtist(
         data.artistId,
-        savedNotification
+        savedNotification,
       );
     }
 
@@ -156,7 +185,7 @@ export class NotificationsService {
   async getUserNotifications(
     userId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ) {
     const [notifications, total] =
       await this.notificationRepository.findAndCount({
@@ -200,7 +229,7 @@ export class NotificationsService {
   async markAllAsRead(userId: string) {
     await this.notificationRepository.update(
       { userId, isRead: false },
-      { isRead: true }
+      { isRead: true },
     );
     return { success: true };
   }
