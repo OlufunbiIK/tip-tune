@@ -1,14 +1,15 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TipsController } from './tips.controller';
-import { TipsService } from './tips.service';
-import { Tip } from './entities/tip.entity';
-import { StellarModule } from '../stellar/stellar.module';
-import { UsersModule } from '../users/users.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { ActivitiesModule } from '../activities/activities.module';
-import { FeesModule } from '../fees/fees.module';
-import { ModerationModule } from '../moderation/moderation.module';
+import { Module, forwardRef } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { TipsController } from "./tips.controller";
+import { TipsService } from "./tips.service";
+import { Tip } from "./entities/tip.entity";
+import { StellarModule } from "../stellar/stellar.module";
+import { UsersModule } from "../users/users.module";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { ActivitiesModule } from "../activities/activities.module";
+import { FeesModule } from "../fees/fees.module";
+import { ModerationModule } from "../moderation/moderation.module";
+import { BlocksModule } from "../blocks/blocks.module";
 
 @Module({
   imports: [
@@ -19,9 +20,10 @@ import { ModerationModule } from '../moderation/moderation.module';
     forwardRef(() => ActivitiesModule),
     FeesModule,
     ModerationModule,
+    BlocksModule,
   ],
   controllers: [TipsController],
   providers: [TipsService],
   exports: [TipsService],
 })
-export class TipsModule { }
+export class TipsModule {}
