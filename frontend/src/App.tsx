@@ -7,6 +7,7 @@ import { LeaderboardsPage } from "./pages/LeaderboardsPage";
 import DashboardPage from "./pages/DashboardPage";
 import SettingsPage from "./pages/SettingsPage";
 import TipHistoryPage from "./pages/TipHistoryPage";
+import TipReceiptPage from "./pages/TipReceiptPage";
 import AppHeader from "./components/layout/AppHeader";
 import MusicPlayer, { tracks } from "./components/player/MusicPlayer";
 import { ArtistOnboarding } from "./components/ArtistOnboarding";
@@ -33,6 +34,7 @@ function App() {
           <Route path="/analytics" element={<AnalyticsDashboard />} />
           <Route path="/artists/:artistId" element={<ArtistProfilePage />} />
           <Route path="/tips/history" element={<TipHistoryPage />} />
+          <Route path="/tips/:tipId/receipt" element={<TipReceiptPage />} />
           <Route path="/live-performance" element={<LivePerformanceMode />} />
           {/* <Route path="/music-player" element={<MusicPlayer />} /> */}
           <Route path="*" element={<NotFoundPage />} />

@@ -69,6 +69,62 @@ export interface TipHistoryItem extends Tip {
   artistName?: string;
 }
 
+/**
+ * Full tip receipt data returned from the backend `GET /tips/:id`
+ * Maps to the backend Tip entity with loaded relations.
+ */
+export interface TipReceipt {
+  id: string;
+  artistId: string;
+  trackId?: string;
+  goalId?: string;
+  stellarTxHash: string;
+  senderAddress: string;
+  receiverAddress: string;
+  amount: number;
+  assetCode: string;
+  assetIssuer?: string;
+  assetType: string;
+  message?: string;
+  stellarMemo?: string;
+  status: TipReceiptStatus;
+  type: 'artist' | 'track';
+  verifiedAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  reversedAt?: string;
+  reversalReason?: string;
+  distributionHash?: string;
+  distributedAt?: string;
+  stellarTimestamp?: string;
+  exchangeRate?: number;
+  fiatCurrency?: string;
+  fiatAmount?: number;
+  isAnonymous: boolean;
+  asset: string;
+  isPublic: boolean;
+  metadata?: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Loaded relations */
+  artist?: {
+    id: string;
+    artistName: string;
+    profileImage?: string;
+    walletAddress: string;
+    genre?: string;
+  };
+  track?: {
+    id: string;
+    title: string;
+    coverArtUrl?: string;
+    artist?: { id: string; artistName: string };
+  };
+}
+
+/** Status enum matching backend TipStatus values */
+export type TipReceiptStatus = 'pending' | 'verified' | 'failed' | 'reversed';
+
 // User types
 export interface User {
   id: string;
