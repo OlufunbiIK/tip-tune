@@ -55,7 +55,7 @@ impl TimeLockContract {
             }
         }
         let lock_id_str = core::str::from_utf8(&buf[i..]).unwrap();
-        let lock_id = String::from_slice(&env, lock_id_str);
+        let lock_id = String::from_str(&env, lock_id_str);
 
         let tip = TimeLockTip {
             lock_id: lock_id.clone(),
@@ -170,6 +170,15 @@ impl TimeLockContract {
         env: Env,
         artist: Address,
     ) -> Vec<TimeLockTip> {
-        Vec::new(&env)
+        let tip_ids = storage::get_artist_tips(&env, artist);
+        let mut pending = Vec::new(&env);
+        for lock_id in tip_ids.iter() {
+            if let Some(tip) = storage::get_tip(&env, lock_id) {
+                if tip.status == TimeLockStatus::Locked {
+                    pending.push_back(tip);
+                }
+            }
+        }
+        pending
     }
 }
