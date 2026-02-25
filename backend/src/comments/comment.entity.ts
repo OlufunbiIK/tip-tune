@@ -11,9 +11,10 @@ import {
 import { Track } from '../tracks/entities/track.entity';
 import { User } from '../users/entities/user.entity';
 import { CommentLike } from './comment-like.entity';
+import { AppBaseEntity } from '../common/entities/base.entity';
 
 @Entity('comments')
-export class Comment {
+export class Comment extends AppBaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

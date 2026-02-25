@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const apiVersion = process.env.API_VERSION || 'v1';
 
   // Enable cookie parser
   app.use(cookieParser());
@@ -24,6 +25,16 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.use((_, res, next) => {
+    res.setHeader('API-Version', apiVersion);
+    next();
+  });
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: apiVersion.replace(/^v/i, ''),
+  });
 
   // API prefix
   app.setGlobalPrefix('api', {

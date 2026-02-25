@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   Index,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { AppBaseEntity } from '../../common/entities/base.entity';
 
 export enum ActivityType {
   NEW_TRACK = 'new_track',
@@ -41,7 +43,7 @@ export enum EntityType {
 @Index(['userId', 'activityType'])
 @Index(['userId', 'isSeen'])
 @Index(['entityType', 'entityId'])
-export class Activity {
+export class Activity extends AppBaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -75,4 +77,7 @@ export class Activity {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
