@@ -4,15 +4,17 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  UpdateDateColumn,
   JoinColumn,
   Unique,
 } from 'typeorm';
 import { Comment } from './comment.entity';
-import { User } from '../users/user.entity';
+import { User } from '../users/entities/user.entity';
+import { AppBaseEntity } from '../common/entities/base.entity';
 
 @Entity('comment_likes')
 @Unique(['commentId', 'userId'])
-export class CommentLike {
+export class CommentLike extends AppBaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -32,4 +34,7 @@ export class CommentLike {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

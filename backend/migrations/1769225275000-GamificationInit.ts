@@ -4,11 +4,23 @@ export class GamificationInit1769225275000 implements MigrationInterface {
     name = 'GamificationInit1769225275000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`CREATE TYPE "public"."badges_category_enum" AS ENUM('tipper', 'artist', 'special')`);
-        await queryRunner.query(`CREATE TYPE "public"."badges_tier_enum" AS ENUM('bronze', 'silver', 'gold', 'platinum')`);
+        await queryRunner.query(`
+          DO $$ BEGIN
+            CREATE TYPE "public"."badges_category_enum" AS ENUM('tipper', 'artist', 'special');
+          EXCEPTION
+            WHEN duplicate_object THEN null;
+          END $$
+        `);
+        await queryRunner.query(`
+          DO $$ BEGIN
+            CREATE TYPE "public"."badges_tier_enum" AS ENUM('bronze', 'silver', 'gold', 'platinum');
+          EXCEPTION
+            WHEN duplicate_object THEN null;
+          END $$
+        `);
 
         await queryRunner.query(`
-            CREATE TABLE "badges" (
+            CREATE TABLE IF NOT EXISTS "badges" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(), 
                 "name" character varying NOT NULL, 
                 "description" text NOT NULL, 
@@ -25,7 +37,7 @@ export class GamificationInit1769225275000 implements MigrationInterface {
         `);
 
         await queryRunner.query(`
-            CREATE TABLE "user_badges" (
+            CREATE TABLE IF NOT EXISTS "user_badges" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(), 
                 "userId" uuid NOT NULL, 
                 "badgeId" uuid NOT NULL, 
@@ -36,10 +48,22 @@ export class GamificationInit1769225275000 implements MigrationInterface {
             )
         `);
 
-        await queryRunner.query(`CREATE INDEX "IDX_user_badges_userId" ON "user_badges" ("userId")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_user_badges_userId" ON "user_badges" ("userId")`);
 
-        await queryRunner.query(`ALTER TABLE "user_badges" ADD CONSTRAINT "FK_user_badges_userId" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "user_badges" ADD CONSTRAINT "FK_user_badges_badgeId" FOREIGN KEY ("badgeId") REFERENCES "badges"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`
+          DO $$ BEGIN
+            ALTER TABLE "user_badges" ADD CONSTRAINT "FK_user_badges_userId" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+          EXCEPTION
+            WHEN duplicate_object THEN null;
+          END $$
+        `);
+        await queryRunner.query(`
+          DO $$ BEGIN
+            ALTER TABLE "user_badges" ADD CONSTRAINT "FK_user_badges_badgeId" FOREIGN KEY ("badgeId") REFERENCES "badges"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+          EXCEPTION
+            WHEN duplicate_object THEN null;
+          END $$
+        `);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

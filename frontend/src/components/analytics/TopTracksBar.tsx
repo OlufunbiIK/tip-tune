@@ -53,7 +53,7 @@ const TopTracksBar: React.FC<TopTracksBarProps> = ({ data }) => {
                         barSize={20}
                         animationDuration={1500}
                     >
-                        {data.map((entry, index) => (
+                        {data.map((_, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                     </Bar>

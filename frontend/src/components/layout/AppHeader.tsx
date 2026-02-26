@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import WalletBalanceWidget from '../wallet/WalletBalanceWidget';
+import ThemeToggle from '../ThemeToggle';
 
 const AppHeader: React.FC = () => {
   const location = useLocation();
@@ -8,9 +10,13 @@ const AppHeader: React.FC = () => {
 
   const navItems = [
     { label: 'Home', to: '/' },
+    { label: 'Explore', to: '/explore' },
     { label: 'Leaderboards', to: '/leaderboards' },
     { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Settings', to: '/settings' },
+    { label: 'Tip History', to: '/tips/history' },
     { label: 'Analytics', to: '/analytics' },
+    { label: 'Live Mode', to: '/live-performance' },
   ];
 
   const toggleMenu = () => setIsOpen((prev) => !prev);
@@ -83,6 +89,9 @@ const AppHeader: React.FC = () => {
             aria-label="Mobile navigation"
           >
             <ul className="flex flex-col gap-1 pt-3">
+              <li className="px-3 py-2">
+                <ThemeToggle compact />
+              </li>
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to;
                 return (
@@ -111,4 +120,3 @@ const AppHeader: React.FC = () => {
 };
 
 export default AppHeader;
-

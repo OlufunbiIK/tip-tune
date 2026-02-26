@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsNumber, IsBoolean, IsEnum, IsDate, IsUUID, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText, SanitiseAsRichText } from '../../common/utils/sanitise.util';
 
 export enum Genre {
   ROCK = 'rock',
@@ -23,6 +24,7 @@ export class CreateTrackDto {
   })
   @IsString()
   @MaxLength(255)
+  @SanitiseAsPlainText()
   title: string;
 
   @ApiPropertyOptional({
@@ -80,6 +82,7 @@ export class CreateTrackDto {
   })
   @IsOptional()
   @IsString()
+  @SanitiseAsRichText()
   description?: string;
 
   @ApiPropertyOptional({

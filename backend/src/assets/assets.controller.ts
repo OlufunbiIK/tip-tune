@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, ParseFloatPipe } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 
 @Controller('assets')
@@ -19,7 +19,7 @@ export class AssetsController {
   convert(
     @Query('from') from: string,
     @Query('to') to: string,
-    @Query('amount') amount: number,
+    @Query('amount', ParseFloatPipe) amount: number,
   ) {
     return this.assetsService.getConversionRate(from, to, amount);
   }

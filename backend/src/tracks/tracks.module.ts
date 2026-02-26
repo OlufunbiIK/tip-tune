@@ -7,6 +7,7 @@ import { Track } from './entities/track.entity';
 import { Artist } from '../artists/entities/artist.entity';
 import { StorageModule } from '../storage/storage.module';
 import { ActivitiesModule } from '../activities/activities.module';
+import { LicensingModule } from "@/track-listening-right-management/licensing.module";
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ActivitiesModule } from '../activities/activities.module';
     StorageModule,
     forwardRef(() => ActivitiesModule),
     EventEmitterModule,
+    LicensingModule,
   ],
   controllers: [TracksController],
   providers: [TracksService],

@@ -43,7 +43,7 @@ interface UseAudioReturn {
   toggleMute: () => void;
   
   // Audio element ref (for advanced usage)
-  audioRef: React.RefObject<HTMLAudioElement  | null>;
+  audioRef: React.RefObject<HTMLAudioElement>;
 }
 
 export const useAudio = ({
@@ -262,7 +262,7 @@ export const useAudio = ({
     toggleMute,
     
     // Ref
-    audioRef,
+    audioRef: audioRef as React.RefObject<HTMLAudioElement>,
   };
 };
 

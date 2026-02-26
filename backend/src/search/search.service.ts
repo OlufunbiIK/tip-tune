@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Artist } from '../artists/entities/artist.entity';
 import { Track } from '../tracks/entities/track.entity';
+import { ArtistStatus } from '../artist-status/entities/artist-status.entity';
 import {
   SearchQueryDto,
   SearchType,
@@ -13,13 +16,7 @@ import { SearchSuggestionsQueryDto } from './dto/search-suggestions-query.dto';
 const SIMILARITY_THRESHOLD = 0.1;
 const FUZZY_WEIGHT = 0.5;
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+
 
 export interface SearchResult {
   artists?: PaginatedResult<Artist>;
@@ -56,6 +53,8 @@ export class SearchService {
     private readonly artistRepo: Repository<Artist>,
     @InjectRepository(Track)
     private readonly trackRepo: Repository<Track>,
+    @InjectRepository(ArtistStatus)
+    private readonly statusRepo: Repository<ArtistStatus>,
   ) {}
 
   async search(dto: SearchQueryDto): Promise<SearchResult> {
@@ -73,7 +72,17 @@ export class SearchService {
   }
 
   private async searchArtists(dto: SearchQueryDto): Promise<PaginatedResult<Artist>> {
-    const { page = 1, limit = 10, sort = 'relevance', genre } = dto;
+    const {
+      page = 1,
+      limit = 10,
+      sort = 'relevance',
+      genre,
+      status,
+      country,
+      city,
+      hasLocation,
+      isVerified,
+    } = dto;
     const skip = (page - 1) * limit;
     const q = dto.q ? sanitizeQuery(dto.q) : '';
     const tsQuery = dto.q ? toTsQueryString(dto.q) : '';
@@ -81,7 +90,11 @@ export class SearchService {
 
     const qb = this.artistRepo
       .createQueryBuilder('artist')
-      .select(['artist']);
+      .leftJoinAndSelect(
+        'artist.artistStatus',
+        'status',
+        'status.showOnProfile = true',
+      );
 
     if (hasQuery) {
       if (tsQuery) {
@@ -101,6 +114,21 @@ export class SearchService {
 
     if (genre) {
       qb.andWhere('artist.genre ILIKE :genre', { genre: `%${genre}%` });
+    }
+    if (status) {
+      qb.andWhere('artist.status = :status', { status });
+    }
+    if (country) {
+      qb.andWhere('UPPER(artist.country) = UPPER(:country)', { country });
+    }
+    if (city) {
+      qb.andWhere('artist.city ILIKE :city', { city: `%${city}%` });
+    }
+    if (hasLocation === true) {
+      qb.andWhere('artist.hasLocation = :hasLocation', { hasLocation: true });
+    }
+    if (isVerified === true) {
+      qb.andWhere('artist.isVerified = :isVerified', { isVerified: true });
     }
 
     switch (sort as SortOption) {
@@ -158,7 +186,11 @@ export class SearchService {
     const qb = this.trackRepo
       .createQueryBuilder('track')
       .leftJoinAndSelect('track.artist', 'artist')
-      .select(['track', 'artist']);
+      .leftJoinAndSelect(
+        'artist.artistStatus',
+        'status',
+        'status.showOnProfile = true',
+      );
 
     if (hasQuery) {
       if (tsQuery) {

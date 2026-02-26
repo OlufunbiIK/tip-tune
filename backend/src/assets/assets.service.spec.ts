@@ -6,6 +6,7 @@ import { StellarService } from '../stellar/stellar.service';
 
 const mockAssetsRepository = {
   find: jest.fn(),
+  findOne: jest.fn(),
 };
 
 const mockStellarService = {
@@ -54,12 +55,15 @@ describe('AssetsService', () => {
     it('should call stellar service for conversion', async () => {
       const rate = { rate: 0.5, estimatedAmount: '50' };
       mockStellarService.getConversionRate.mockResolvedValue(rate);
+      mockAssetsRepository.findOne = jest.fn().mockResolvedValue({ assetIssuer: 'ISSUER' });
 
-      const result = await service.getConversionRate('XLM', 'USDC', 100);
+      const result = await service.getConversionRate('USDC', 'XLM', 100);
       expect(result).toEqual(rate);
       expect(mockStellarService.getConversionRate).toHaveBeenCalledWith(
-        'XLM',
         'USDC',
+        'ISSUER',
+        'XLM',
+        null,
         100,
       );
     });

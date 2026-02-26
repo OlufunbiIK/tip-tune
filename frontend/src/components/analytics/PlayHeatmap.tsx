@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { HeatmapData } from '../../types/analytics';
-import { format, subDays, startOfYear, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, subDays, eachDayOfInterval, isSameDay } from 'date-fns';
 
 interface PlayHeatmapProps {
     data: HeatmapData[];

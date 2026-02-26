@@ -1,0 +1,12 @@
+   Compiling stellar-xdr v21.2.0
+    Checking rand_chacha v0.3.1
+   Compiling soroban-sdk-macros v21.7.7
+   Compiling soroban-sdk v21.7.7
+error: failed to run custom build command for `stellar-xdr v21.2.0`
+
+Caused by:
+  could not execute process `C:\Users\nwaug\Desktop\Blockchain\DripsWave\tip-tune\contracts\reward-token\target\debug\build\stellar-xdr-b1aebdb59e67cff7\build-script-build` (never executed)
+
+Caused by:
+  An Application Control policy has blocked this file. (os error 4551)
+warning: build failed, waiting for other jobs to finish...

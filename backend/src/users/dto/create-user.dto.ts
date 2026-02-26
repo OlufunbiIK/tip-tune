@@ -1,5 +1,6 @@
 import { IsString, IsEmail, IsOptional, IsBoolean, IsUrl, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText, SanitiseAsRichText } from '../../common/utils/sanitise.util';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -11,6 +12,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(3)
   @MaxLength(255)
+  @SanitiseAsPlainText()
   username: string;
 
   @ApiProperty({
@@ -44,6 +46,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsString()
+  @SanitiseAsRichText()
   bio?: string;
 
   @ApiPropertyOptional({

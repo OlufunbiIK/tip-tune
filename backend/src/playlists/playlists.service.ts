@@ -26,10 +26,10 @@ import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { AddTrackDto } from './dto/add-track.dto';
 import { ReorderTracksDto } from './dto/reorder-tracks.dto';
 import { DuplicatePlaylistDto } from './dto/duplicate-playlist.dto';
-import {
   PlaylistPaginationDto,
-  PaginatedPlaylistResponse,
 } from './dto/pagination.dto';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityType, EntityType } from '../activities/entities/activity.entity';
 import { CreateActivityDto } from '../activities/dto/create-activity.dto';

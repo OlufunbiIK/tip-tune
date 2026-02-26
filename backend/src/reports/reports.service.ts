@@ -6,11 +6,12 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { User, UserStatus } from '../users/entities/user.entity';
 import { Track } from '../tracks/entities/track.entity';
-import Filter = require('bad-words');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Filter = require('bad-words');
 
 @Injectable()
 export class ReportsService {
-  private filter: Filter;
+  private filter: any;
 
   constructor(
     @InjectRepository(Report)

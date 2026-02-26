@@ -34,7 +34,7 @@ const TipStream: React.FC = () => {
         };
     };
 
-    const animate = (time: number) => {
+    const animate = (_time: number) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');

@@ -1,6 +1,6 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
 @Injectable()
 export class StellarService {
@@ -8,14 +8,11 @@ export class StellarService {
   private readonly logger = new Logger(StellarService.name);
 
   constructor(private configService: ConfigService) {
-    const network = this.configService.get<string>(
-      "STELLAR_NETWORK",
-      "testnet"
-    );
+    const network = this.configService.get<string>('STELLAR_NETWORK', 'testnet');
     const horizonUrl =
-      network === "mainnet"
-        ? "https://horizon.stellar.org"
-        : "https://horizon-testnet.stellar.org";
+      network === 'mainnet'
+        ? 'https://horizon.stellar.org'
+        : 'https://horizon-testnet.stellar.org';
 
     this.server = new StellarSdk.Horizon.Server(horizonUrl);
   }
@@ -24,8 +21,8 @@ export class StellarService {
     txHash: string,
     amount: string,
     recipientId: string,
-    assetCode: string = "XLM",
-    assetIssuer?: string
+    assetCode: string = 'XLM',
+    assetIssuer?: string,
   ): Promise<boolean> {
     try {
       const tx = await this.server.transactions().transaction(txHash).call();
@@ -41,61 +38,59 @@ export class StellarService {
       // We need to inspect operations to ensure the correct amount was sent to the correct recipient
       const operations = await tx.operations();
 
-      const paymentOp = operations.records.find((op: any) => {
-        // Check type and basic fields
-        const isPayment =
-          op.type === "payment" ||
-          op.type === "path_payment_strict_send" ||
-          op.type === "path_payment_strict_receive";
-        if (!isPayment || op.to !== recipientId) return false;
+      const paymentOp = operations.records.find(
+        (op: any) => {
+          // Check type and basic fields
+          const isPayment = op.type === 'payment' || op.type === 'path_payment_strict_send' || op.type === 'path_payment_strict_receive';
+          if (!isPayment || op.to !== recipientId) return false;
 
-        // Check amount
-        if (op.amount !== amount) return false;
+          // Check amount
+          if (op.amount !== amount) return false;
 
-        // Check asset
-        if (assetCode === "XLM" || assetCode === "native") {
-          return op.asset_type === "native";
-        } else {
-          return (
-            (op.asset_code === assetCode && op.asset_issuer === assetIssuer) ||
-            // Handle path payments where 'to' asset matches
-            (op.asset_code === undefined &&
-              op.asset_type === "native" &&
-              assetCode === "XLM") // Fallback for some structures
-          );
+          // Check asset
+          if (assetCode === 'XLM' || assetCode === 'native') {
+            return op.asset_type === 'native';
+          } else {
+            return (
+              (op.asset_code === assetCode && op.asset_issuer === assetIssuer) ||
+              // Handle path payments where 'to' asset matches
+              (op.asset_code === undefined && op.asset_type === 'native' && assetCode === 'XLM') // Fallback for some structures
+            );
+          }
         }
-      });
+      );
 
       if (!paymentOp) {
         this.logger.warn(
-          `Transaction ${txHash} does not contain a valid payment operation to ${recipientId} for ${amount} ${assetCode}`
+          `Transaction ${txHash} does not contain a valid payment operation to ${recipientId} for ${amount} ${assetCode}`,
         );
         return false;
       }
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Error verifying transaction ${txHash}: ${error.message}`
-      );
+      this.logger.error(`Error verifying transaction ${txHash}: ${error.message}`);
       return false;
     }
   }
 
   async getConversionRate(
     fromAssetCode: string,
+    fromAssetIssuer: string | null,
     toAssetCode: string,
+    toAssetIssuer: string | null,
     amount: number
   ) {
     try {
       const fromAsset =
-        fromAssetCode === "XLM"
+        fromAssetCode === 'XLM'
           ? StellarSdk.Asset.native()
-          : new StellarSdk.Asset(fromAssetCode, "TODO_ISSUER_LOOKUP"); // Needs issuer lookup in real implementation
+          : new StellarSdk.Asset(fromAssetCode, fromAssetIssuer!);
+
       const toAsset =
-        toAssetCode === "XLM"
+        toAssetCode === 'XLM'
           ? StellarSdk.Asset.native()
-          : new StellarSdk.Asset(toAssetCode, "TODO_ISSUER_LOOKUP");
+          : new StellarSdk.Asset(toAssetCode, toAssetIssuer!);
 
       // Use strict send path to find how much destination asset we get for source amount
       const paths = await this.server
@@ -121,9 +116,7 @@ export class StellarService {
       const tx = await this.server.transactions().transaction(txHash).call();
       return tx;
     } catch (error) {
-      this.logger.error(
-        `Error fetching transaction ${txHash}: ${error.message}`
-      );
+      this.logger.error(`Error fetching transaction ${txHash}: ${error.message}`);
       throw error;
     }
   }
@@ -136,17 +129,9 @@ export class StellarService {
     // 3. Sign and submit
 
     // For now, return a mock hash if enabled
-    if (process.env.ENABLE_NFT_MINTING === "true") {
-      return "mock_tx_hash_" + Date.now();
+    if (process.env.ENABLE_NFT_MINTING === 'true') {
+      return 'mock_tx_hash_' + Date.now();
     }
     return null;
-  }
-
-  async sendMultiRecipientPayment(
-    recipients: { destination: string; amount: string }[],
-    sourceTxHash?: string
-  ): Promise<string> {
-    // implementation
-    return "tx_hash";
   }
 }

@@ -16,7 +16,7 @@ export class SupportedAsset {
   assetCode: string;
 
   @Column({ length: 56, nullable: true })
-  assetIssuer: string;
+  assetIssuer: string | null;
 
   @Column({
     type: 'enum',

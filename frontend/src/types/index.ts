@@ -59,6 +59,124 @@ export interface Tip {
   trackId?: string; // UUID string matching Track.id
 }
 
+/** Extended tip for history page: amount in asset, USD, track, Stellar link */
+export interface TipHistoryItem extends Tip {
+  stellarTxHash?: string;
+  assetCode?: string;
+  usdAmount?: number;
+  trackTitle?: string;
+  /** For "Sent" tab: artist name; for "Received" tab: tipper is already shown */
+  artistName?: string;
+  /** Gift metadata — present when this tip was sent as a gift on behalf of someone */
+  gift?: GiftMeta;
+}
+
+// ─── Gift / Tip-on-behalf types ────────────────────────────────────────────
+
+/** Statuses a gift can be in */
+export type GiftStatus = 'pending' | 'delivered' | 'failed';
+
+/** Slim user reference used in gift flows */
+export interface GiftUserRef {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Gift metadata attached to a tip that was sent "on behalf of" someone.
+ * The *payer* is the one who funded the tip; the *recipient* is the user
+ * who gets public credit for the tip.
+ */
+export interface GiftMeta {
+  /** Unique gift record id */
+  id: string;
+  /** The user being credited as tipper in the artist's feed */
+  recipient: GiftUserRef;
+  /** The user who actually paid – omitted/null when isAnonymous=true */
+  giver?: GiftUserRef | null;
+  /** Whether the giver's identity is hidden from the artist and recipient */
+  isAnonymous: boolean;
+  /** Custom message from giver to recipient (not shown to artist) */
+  giftNote?: string;
+  /** Message shown to artist (from recipient, publicly visible) */
+  artistMessage?: string;
+  status: GiftStatus;
+  createdAt: string;
+  /** Shareable URL for this gift receipt */
+  shareUrl?: string;
+}
+
+/**
+ * Full gift receipt, returned from the API at GET /gifts/:giftId
+ */
+export interface GiftReceipt {
+  giftId: string;
+  tip: TipHistoryItem;
+  gift: GiftMeta;
+  /** True when the current viewer is the recipient */
+  isRecipient?: boolean;
+  /** True when the current viewer is the giver */
+  isGiver?: boolean;
+}
+
+/**
+ * Full tip receipt data returned from the backend `GET /tips/:id`
+ * Maps to the backend Tip entity with loaded relations.
+ */
+export interface TipReceipt {
+  id: string;
+  artistId: string;
+  trackId?: string;
+  goalId?: string;
+  stellarTxHash: string;
+  senderAddress: string;
+  receiverAddress: string;
+  amount: number;
+  assetCode: string;
+  assetIssuer?: string;
+  assetType: string;
+  message?: string;
+  stellarMemo?: string;
+  status: TipReceiptStatus;
+  type: 'artist' | 'track';
+  verifiedAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  reversedAt?: string;
+  reversalReason?: string;
+  distributionHash?: string;
+  distributedAt?: string;
+  stellarTimestamp?: string;
+  exchangeRate?: number;
+  fiatCurrency?: string;
+  fiatAmount?: number;
+  isAnonymous: boolean;
+  asset: string;
+  isPublic: boolean;
+  metadata?: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Loaded relations */
+  artist?: {
+    id: string;
+    artistName: string;
+    profileImage?: string;
+    walletAddress: string;
+    genre?: string;
+  };
+  track?: {
+    id: string;
+    title: string;
+    coverArtUrl?: string;
+    artist?: { id: string; artistName: string };
+  };
+}
+
+/** Status enum matching backend TipStatus values */
+export type TipReceiptStatus = 'pending' | 'verified' | 'failed' | 'reversed';
+
 // User types
 export interface User {
   id: string;
@@ -265,4 +383,31 @@ export interface UserProfile {
   bio: string;
   avatar: string;
   walletAddress: string;
+}
+
+export interface ArtistSocialLinks {
+  website?: string;
+  twitter?: string;
+  instagram?: string;
+  youtube?: string;
+  tiktok?: string;
+}
+
+export interface ArtistProfilePublic {
+  id: string;
+  artistName: string;
+  bio: string;
+  profileImage: string;
+  coverImage: string;
+  accentColor?: string;
+  totalTipsReceived: number;
+  followerCount: number;
+  isFollowing: boolean;
+  socialLinks: ArtistSocialLinks;
+}
+
+export interface ArtistProfilePageData {
+  artist: ArtistProfilePublic;
+  tracks: Track[];
+  recentTips: Tip[];
 }

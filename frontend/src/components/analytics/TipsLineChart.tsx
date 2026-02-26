@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-    LineChart,
-    Line,
+    // LineChart,
+    // Line,
     XAxis,
     YAxis,
     CartesianGrid,
