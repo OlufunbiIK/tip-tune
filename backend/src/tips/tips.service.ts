@@ -11,8 +11,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Tip, TipStatus } from "./entities/tip.entity";
 import { CreateTipDto } from "./create-tips.dto";
-import { PaginatedResponse } from '../common/dto/paginated-response.dto';
-import { paginate } from '../common/helpers/paginate.helper';
+// Removed unused imports (PaginatedResponse, paginate) to satisfy ESLint
 import { StellarService } from "../stellar/stellar.service";
 import { UsersService } from "../users/users.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -23,6 +22,27 @@ import { NotificationType } from "../notifications/notification.entity";
 import { FeesService } from "../fees/fees.service";
 import { ModerationService } from "../moderation/moderation.service";
 import { BlocksService } from "../blocks/blocks.service";
+import { TipReconciliationService } from "./tip-reconciliation.service";
+
+// Make sure to define PaginatedResponseDto locally or import it from the correct path if it exists
+export interface PaginatedResponseDto<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+// Add PaginationQueryDto interface since it was implicitly used
+export interface PaginationQueryDto {
+  page?: number;
+  limit?: number;
+  status?: string;
+}
 
 @Injectable()
 export class TipsService {
@@ -40,12 +60,13 @@ export class TipsService {
     private readonly feesService: FeesService,
     private readonly moderationService: ModerationService,
     private readonly blocksService: BlocksService,
+    @Inject(forwardRef(() => TipReconciliationService))
+    private readonly tipReconciliationService: TipReconciliationService,
   ) {}
 
   async create(userId: string, createTipDto: CreateTipDto): Promise<Tip> {
     const { artistId, trackId, stellarTxHash, message } = createTipDto;
 
-    // 1. Check if tip already exists
     const existingTip = await this.tipRepository.findOne({
       where: { stellarTxHash },
     });
@@ -56,12 +77,10 @@ export class TipsService {
       );
     }
 
-    // 2. Validate users
     if (userId === artistId) {
       throw new BadRequestException("Cannot tip yourself");
     }
 
-    // 2.1 Check if user is blocked by artist
     const isBlocked = await this.blocksService.isBlockedByArtist(
       artistId,
       userId,
@@ -72,7 +91,6 @@ export class TipsService {
       );
     }
 
-    // Fetch artist to get wallet address
     let artist;
     try {
       artist = await this.usersService.findOne(artistId);
@@ -89,12 +107,10 @@ export class TipsService {
       );
     }
 
-    // 3. Verify transaction on Stellar
     let txDetails;
     try {
-      txDetails =
-        await this.stellarService.getTransactionDetails(stellarTxHash);
-    } catch (e) {
+      txDetails = await this.stellarService.getTransactionDetails(stellarTxHash);
+    } catch (e: any) {
       throw new BadRequestException(
         `Invalid Stellar transaction hash: ${e.message}`,
       );
@@ -105,7 +121,6 @@ export class TipsService {
     }
 
     const operations = await txDetails.operations();
-    // Find payment to artist
     const paymentOp: any = operations.records.find((op: any) => {
       const isPayment =
         op.type === "payment" ||
@@ -121,24 +136,20 @@ export class TipsService {
     }
 
     const amount = paymentOp.amount;
-    const assetCode =
-      paymentOp.asset_type === "native" ? "XLM" : paymentOp.asset_code;
+    const assetCode = paymentOp.asset_type === "native" ? "XLM" : paymentOp.asset_code;
     const assetIssuer = paymentOp.asset_issuer;
     const assetType = paymentOp.asset_type;
 
-
-    // If user is soft-deleted, anonymize sender
     let user = null;
     let senderAddress = 'anonymous';
     try {
       user = await this.usersService.findOne(userId);
       senderAddress = user.walletAddress;
     } catch (e) {
-      // If user not found or soft-deleted, keep senderAddress as 'anonymous'
+      // Keep senderAddress as 'anonymous'
     }
     const receiverAddress = artist.walletAddress;
 
-    // 4. Create Tip record
     const newTip = this.tipRepository.create({
       artistId,
       trackId,
@@ -167,12 +178,11 @@ export class TipsService {
       new TipVerifiedEvent(savedTip, userId),
     );
 
-    // 7. Notify artist
     await this.notificationsService.create({
       userId: artistId,
       type: NotificationType.TIP_RECEIVED,
       title: "New Tip Received!",
-      message: `You received a tip of ${amount} ${assetCode} from ${user.username || "a fan"}`,
+      message: `You received a tip of ${amount} ${assetCode} from ${user?.username || "a fan"}`,
       data: { tipId: savedTip.id, amount, assetCode },
     });
 
@@ -213,10 +223,10 @@ export class TipsService {
       queryBuilder.andWhere("tip.status = :status", { status });
     }
 
-    let [data, total] = await queryBuilder.getManyAndCount();
+    // ESLint Fix: Separate the const array from the reassigned data variable
+    const [originalData, total] = await queryBuilder.getManyAndCount();
 
-    // Anonymize tips if user is soft-deleted
-    data = data.map(tip => {
+    const data = originalData.map(tip => {
       if (tip.artist && tip.artist.isDeleted) {
         tip.artist = null;
       }
@@ -247,10 +257,10 @@ export class TipsService {
       queryBuilder.andWhere("tip.status = :status", { status });
     }
 
-    let [data, total] = await queryBuilder.getManyAndCount();
+    // ESLint Fix: Separate the const array from the reassigned data variable
+    const [originalData, total] = await queryBuilder.getManyAndCount();
 
-    // Anonymize sender if user is soft-deleted
-    data = data.map(tip => {
+    const data = originalData.map(tip => {
       if (tip.fromUser && tip.fromUser.isDeleted) {
         tip.fromUser = null;
         tip.senderAddress = 'anonymous';
@@ -264,7 +274,15 @@ export class TipsService {
   async updateTipStatus(id: string, status: TipStatus): Promise<Tip> {
     const tip = await this.findOne(id);
     tip.status = status;
-    return this.tipRepository.save(tip);
+    const savedTip = await this.tipRepository.save(tip);
+
+    if (tip.trackId && (status === TipStatus.FAILED || status === TipStatus.REVERSED)) {
+      this.tipReconciliationService.reconcileTrack(tip.trackId).catch((err) => {
+        this.logger.error(`Failed to reconcile track ${tip.trackId}:`, err);
+      });
+    }
+
+    return savedTip;
   }
 
   async getTipsByTrack(

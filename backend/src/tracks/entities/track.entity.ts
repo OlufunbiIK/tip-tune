@@ -45,6 +45,11 @@ export class Track {
   @Column({ type: "int", default: 0 })
   tipCount: number;
 
+  // --- NEW ADDITION FOR ISSUE #205 ---
+  @Column({ type: "timestamp", nullable: true })
+  lastRecalculatedAt: Date;
+  // -----------------------------------
+
   @Column({ length: 255, nullable: true })
   filename: string;
 
