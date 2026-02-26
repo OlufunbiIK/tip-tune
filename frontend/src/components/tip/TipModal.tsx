@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { animated, useSpring, useTrail } from 'react-spring';
-import { X } from 'lucide-react';
+import { X, Gift } from 'lucide-react';
 import { useSwipeGesture, useVirtualKeyboard, useHaptic } from '../../hooks';
 import { useReducedMotion, getSpringConfig } from '../../utils/animationUtils';
 import { getSafeAreaInsets, setupSafeAreaInsets } from '../../utils/gestures';
@@ -20,6 +20,8 @@ export interface TipModalProps {
     artistName: string;
     artistImage?: string;
     onTipSuccess?: (amount: number, currency: string, message?: string) => Promise<void>;
+    /** Optional: when provided shows a "Gift this tip" link that opens the gift flow */
+    onGiftTip?: () => void;
     walletBalance?: {
         xlm: number;
         usdc: number;
@@ -35,6 +37,7 @@ const TipModal: React.FC<TipModalProps> = ({
     artistName,
     artistImage,
     onTipSuccess,
+    onGiftTip,
     walletBalance = { xlm: 1000, usdc: 100 },
     xlmUsdRate = 0.11,
 }) => {
@@ -240,6 +243,7 @@ const TipModal: React.FC<TipModalProps> = ({
                             onAmountChange={handleAmountChange}
                             onCurrencyToggle={handleCurrencyToggle}
                             onNext={handleProceedToMessage}
+                            onGiftTip={onGiftTip}
                             walletBalance={walletBalance}
                             xlmUsdRate={xlmUsdRate}
                             reducedMotion={reducedMotion}
@@ -311,6 +315,7 @@ const StepAmount: React.FC<
         onAmountChange: (amount: number) => void;
         onCurrencyToggle: (currency: 'XLM' | 'USDC') => void;
         onNext: () => void;
+        onGiftTip?: () => void;
         walletBalance: { xlm: number; usdc: number };
         xlmUsdRate: number;
     } & StepProps
@@ -320,6 +325,7 @@ const StepAmount: React.FC<
     onAmountChange,
     onCurrencyToggle,
     onNext,
+    onGiftTip,
     walletBalance,
     xlmUsdRate,
     reducedMotion,
@@ -345,7 +351,7 @@ const StepAmount: React.FC<
                 />
             </div>
 
-            <animated.div style={{ ...trail[1] }}>
+            <animated.div style={{ ...trail[1] }} className="space-y-2">
                 <button
                     onClick={onNext}
                     disabled={amount <= 0}
@@ -357,6 +363,21 @@ const StepAmount: React.FC<
                 >
                     Continue
                 </button>
+
+                {/* Gift a tip entry point */}
+                {onGiftTip && (
+                    <button
+                        type="button"
+                        onClick={onGiftTip}
+                        className="w-full py-2.5 rounded-lg font-medium text-sm text-purple-400
+                        border border-purple-500/30 hover:border-purple-500/60 hover:bg-purple-500/5
+                        transition-all duration-200 flex items-center justify-center gap-2"
+                        data-testid="open-gift-modal-btn"
+                    >
+                        <Gift className="h-4 w-4" />
+                        Gift this tip on behalf of a friend
+                    </button>
+                )}
             </animated.div>
         </animated.div>
     );

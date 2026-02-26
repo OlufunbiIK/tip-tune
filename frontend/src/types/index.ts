@@ -67,6 +67,58 @@ export interface TipHistoryItem extends Tip {
   trackTitle?: string;
   /** For "Sent" tab: artist name; for "Received" tab: tipper is already shown */
   artistName?: string;
+  /** Gift metadata — present when this tip was sent as a gift on behalf of someone */
+  gift?: GiftMeta;
+}
+
+// ─── Gift / Tip-on-behalf types ────────────────────────────────────────────
+
+/** Statuses a gift can be in */
+export type GiftStatus = 'pending' | 'delivered' | 'failed';
+
+/** Slim user reference used in gift flows */
+export interface GiftUserRef {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Gift metadata attached to a tip that was sent "on behalf of" someone.
+ * The *payer* is the one who funded the tip; the *recipient* is the user
+ * who gets public credit for the tip.
+ */
+export interface GiftMeta {
+  /** Unique gift record id */
+  id: string;
+  /** The user being credited as tipper in the artist's feed */
+  recipient: GiftUserRef;
+  /** The user who actually paid – omitted/null when isAnonymous=true */
+  giver?: GiftUserRef | null;
+  /** Whether the giver's identity is hidden from the artist and recipient */
+  isAnonymous: boolean;
+  /** Custom message from giver to recipient (not shown to artist) */
+  giftNote?: string;
+  /** Message shown to artist (from recipient, publicly visible) */
+  artistMessage?: string;
+  status: GiftStatus;
+  createdAt: string;
+  /** Shareable URL for this gift receipt */
+  shareUrl?: string;
+}
+
+/**
+ * Full gift receipt, returned from the API at GET /gifts/:giftId
+ */
+export interface GiftReceipt {
+  giftId: string;
+  tip: TipHistoryItem;
+  gift: GiftMeta;
+  /** True when the current viewer is the recipient */
+  isRecipient?: boolean;
+  /** True when the current viewer is the giver */
+  isGiver?: boolean;
 }
 
 /**
