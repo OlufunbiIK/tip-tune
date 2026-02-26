@@ -17,6 +17,7 @@ import { Response } from 'express';
 import { StorageService } from './storage.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UploadFileDto } from './dto/upload-file.dto';
+import { ThrottleOverride } from '../common/decorators/throttle-override.decorator';
 
 @ApiTags('storage')
 @Controller('files')
@@ -26,6 +27,7 @@ export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
   @Post('upload')
+  @ThrottleOverride('FILE_UPLOAD') // 5 requests per minute
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload an audio file' })
   @ApiConsumes('multipart/form-data')

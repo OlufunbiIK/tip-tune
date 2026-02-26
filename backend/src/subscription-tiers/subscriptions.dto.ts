@@ -12,7 +12,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { SubscriptionStatus } from '../entities/artist-subscription.entity';
+import { SubscriptionStatus } from './enum/SubscriptionStatus';
 
 // ─── Subscription Tier DTOs ─────────────────────────────────────────────────
 

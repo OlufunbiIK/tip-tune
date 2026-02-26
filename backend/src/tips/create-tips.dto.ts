@@ -1,5 +1,6 @@
 import { IsUUID, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText } from '../common/utils/sanitise.util';
 
 export class CreateTipDto {
   @ApiProperty({ description: 'Artist ID receiving the tip', example: '550e8400-e29b-41d4-a716-446655440001' })
@@ -23,5 +24,6 @@ export class CreateTipDto {
   @ApiPropertyOptional({ description: 'Optional message with the tip', example: 'Love your music!' })
   @IsOptional()
   @IsString()
+  @SanitiseAsPlainText()
   message?: string;
 }

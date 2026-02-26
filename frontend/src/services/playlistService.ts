@@ -9,6 +9,56 @@ import {
 } from '../types';
 
 export const playlistService = {
+  create: async (payload: {
+    name: string;
+    description?: string;
+    isPublic?: boolean;
+    approvalRequired?: boolean;
+    coverImage?: string;
+  }): Promise<Playlist> => {
+    const response = await apiClient.post<Playlist>('/playlists', payload);
+    return response.data;
+  },
+
+  update: async (
+    playlistId: string,
+    payload: {
+      name?: string;
+      description?: string;
+      isPublic?: boolean;
+      approvalRequired?: boolean;
+      coverImage?: string;
+    },
+  ): Promise<Playlist> => {
+    const response = await apiClient.patch<Playlist>(
+      `/playlists/${playlistId}`,
+      payload,
+    );
+    return response.data;
+  },
+
+  remove: async (playlistId: string): Promise<void> => {
+    await apiClient.delete(`/playlists/${playlistId}`);
+  },
+
+  duplicate: async (
+    playlistId: string,
+    payload?: { name?: string; isPublic?: boolean },
+  ): Promise<Playlist> => {
+    const response = await apiClient.post<Playlist>(
+      `/playlists/${playlistId}/duplicate`,
+      payload || {},
+    );
+    return response.data;
+  },
+
+  share: async (playlistId: string): Promise<{ shareUrl?: string; isPublic?: boolean }> => {
+    const response = await apiClient.post<{ shareUrl?: string; isPublic?: boolean }>(
+      `/playlists/${playlistId}/share`,
+    );
+    return response.data;
+  },
+
   getAll: async (params?: {
     page?: number;
     limit?: number;

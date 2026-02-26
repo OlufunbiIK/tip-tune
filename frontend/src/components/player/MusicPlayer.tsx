@@ -3,7 +3,7 @@ import TrackInfo from "./TrackInfo";
 import ProgressBar from "./ProgressBar";
 import PlayButton from "./PlayButton";
 import VolumeControl from "./VolumeControl";
-import useAudio from "@/hooks/useAudio";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { Track } from "@/types";
 
 interface MusicPlayerProps {
@@ -13,11 +13,7 @@ interface MusicPlayerProps {
   onPlayStateChange?: (isPlaying: boolean) => void;
 }
 
-const MusicPlayer = ({
-  currentTrackIndex = 0,
-  onTrackChange,
-  onPlayStateChange,
-}: MusicPlayerProps) => {
+const MusicPlayer = (_props: MusicPlayerProps) => {
   const {
     isPlaying,
     isLoading,
@@ -33,12 +29,7 @@ const MusicPlayer = ({
     setVolume,
     toggleMute,
     audioRef,
-  } = useAudio({
-    tracks,
-    initialTrackIndex: currentTrackIndex,
-    onTrackChange,
-    onPlayStateChange,
-  });
+  } = usePlayer();
 
   if (!currentTrack) {
     return (

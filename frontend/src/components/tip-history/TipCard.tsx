@@ -1,7 +1,9 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
-import { TipHistoryItem } from '../../types';
+import { Link } from 'react-router-dom';
+import { ExternalLink, Receipt, Gift } from 'lucide-react';
+import type { TipHistoryItem } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatter';
+import GiftTag from '../tip/GiftTag';
 
 const STELLAR_EXPLORER_BASE = 'https://stellar.expert/explorer/testnet/tx';
 
@@ -9,10 +11,12 @@ interface TipCardProps {
   tip: TipHistoryItem;
   /** 'sent' | 'received' – determines which party to emphasize (artist vs tipper) */
   variant: 'sent' | 'received';
+  /** When tip.gift is present, this context hint adjusts the GiftTag label */
+  giftVariant?: 'given' | 'received' | 'artist';
   onShare?: (tip: TipHistoryItem, variant: 'sent' | 'received') => void;
 }
 
-const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
+const TipCard: React.FC<TipCardProps> = ({ tip, variant, giftVariant, onShare }) => {
   const displayName = variant === 'sent' ? tip.artistName ?? 'Artist' : tip.tipperName;
   const avatarUrl = variant === 'received' ? tip.tipperAvatar : undefined;
   const amountXlm = tip.assetCode ? `${Number(tip.amount).toFixed(2)} ${tip.assetCode}` : formatCurrency(tip.amount);
@@ -21,7 +25,9 @@ const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
 
   return (
     <article
-      className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow"
+      className={`bg-white rounded-xl shadow-md border overflow-hidden hover:shadow-lg transition-shadow ${
+        tip.gift ? 'border-purple-200 dark:border-purple-800/50' : 'border-gray-100'
+      }`}
       data-testid="tip-card"
     >
       <div className="p-4 sm:p-5">
@@ -68,11 +74,18 @@ const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
           </div>
         </div>
 
+        {/* Gift tag — shown when this tip was sent as a gift */}
+        {tip.gift && (
+          <div className="mt-3">
+            <GiftTag gift={tip.gift} variant={giftVariant ?? (variant === 'sent' ? 'given' : 'received')} />
+          </div>
+        )}
+
         {tip.message && (
           <p className="mt-3 text-sm text-gray-600 line-clamp-2">{tip.message}</p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           {stellarUrl && (
             <a
               href={stellarUrl}
@@ -84,6 +97,27 @@ const TipCard: React.FC<TipCardProps> = ({ tip, variant, onShare }) => {
               View on Stellar Explorer
               <ExternalLink className="h-4 w-4" />
             </a>
+          )}
+
+          <Link
+            to={`/tips/${tip.id}/receipt`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-blue hover:text-secondary-indigo"
+            data-testid="view-receipt-link"
+          >
+            View Receipt
+            <Receipt className="h-4 w-4" />
+          </Link>
+
+          {/* Gift receipt link */}
+          {tip.gift && (
+            <Link
+              to={`/gifts/${tip.gift.id}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-500 hover:text-purple-700"
+              data-testid="view-gift-receipt-link"
+            >
+              <Gift className="h-4 w-4" />
+              View Gift Receipt
+            </Link>
           )}
 
           {onShare && (

@@ -7,14 +7,11 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
-  OneToOne,
 } from "typeorm";
 import { Artist } from "../../artists/entities/artist.entity";
 import { Tip } from "../../tips/entities/tip.entity";
 import { TrackGenre } from "../../genres/entities/track-genre.entity";
 import { Collaboration } from "../../collaboration/entities/collaboration.entity";
-import { TrackLicense } from "@/track-listening-right-management/track-license.entity";
-
 
 @Entity("tracks")
 export class Track {
@@ -47,6 +44,11 @@ export class Track {
 
   @Column({ type: "int", default: 0 })
   tipCount: number;
+
+  // --- NEW ADDITION FOR ISSUE #205 ---
+  @Column({ type: "timestamp", nullable: true })
+  lastRecalculatedAt: Date;
+  // -----------------------------------
 
   @Column({ length: 255, nullable: true })
   filename: string;
@@ -87,9 +89,6 @@ export class Track {
 
   @OneToMany(() => Collaboration, (collab) => collab.track)
   collaborations: Collaboration[];
-
-  @OneToOne(() => TrackLicense, (license) => license.track)
-  license: TrackLicense;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -38,4 +38,23 @@ pub struct TipEscrow {
     pub artist: Address,
     pub amount: i128,
     pub asset: Asset,
+    pub status: EscrowStatus,
+    pub release_time: u64,
+    pub created_at: u64,
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum EscrowStatus {
+    Pending,
+    Released,
+    Refunded,
+    Disputed,
+}
+
+// #[contracttype]
+// #[derive(Clone, Debug, Eq, PartialEq)]
+// pub struct RoyaltySplit {
+//     pub track_id: String,
+//     pub collaborators: Vec<(Address, u32)>, // (address, percentage)
+// }

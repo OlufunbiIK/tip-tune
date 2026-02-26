@@ -38,9 +38,11 @@ export class UsersController {
 
   @Get()
   @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: 200, description: 'List of all users', type: [User] })
-  findAll(): Promise<User[]> {
-    return this.usersService.findAll();
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 20, max: 100)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of users', schema: { example: { data: [{ /* user fields */ }], meta: { total: 120, page: 2, limit: 20, totalPages: 6, hasNextPage: true, hasPreviousPage: true } } } })
+  findAll(@Query('page') page = 1, @Query('limit') limit = 20): Promise<any> {
+    return this.usersService.findAll(Number(page), Number(limit));
   }
 
   @Get('artists')
@@ -101,13 +103,36 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a user' })
+  @ApiOperation({ summary: 'Soft delete a user (authenticated user only)' })
   @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({ status: 204, description: 'User deleted successfully' })
+  @ApiResponse({ status: 204, description: 'User soft-deleted successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request - Invalid UUID format' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.usersService.remove(id);
+  }
+
+  // Admin only
+  @Delete(':id/hard')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Hard delete a user (admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
+  @ApiResponse({ status: 204, description: 'User hard-deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async hardDelete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    // TODO: Add admin guard
+    return this.usersService.hardDelete(id);
+  }
+
+  // Admin only
+  @Post(':id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted user (admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
+  @ApiResponse({ status: 200, description: 'User restored successfully', type: User })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async restore(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
+    // TODO: Add admin guard
+    return this.usersService.restore(id);
   }
 }
 

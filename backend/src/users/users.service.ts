@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger, BadRequestException } from '@nestjs/common';
+import { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { paginate } from '../common/helpers/paginate.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -18,7 +20,7 @@ export class UsersService {
     try {
       // Check if username already exists
       const existingUsername = await this.usersRepository.findOne({
-        where: { username: createUserDto.username },
+        where: { username: createUserDto.username, isDeleted: false },
       });
       if (existingUsername) {
         throw new ConflictException(`Username '${createUserDto.username}' is already taken`);
@@ -26,7 +28,7 @@ export class UsersService {
 
       // Check if email already exists
       const existingEmail = await this.usersRepository.findOne({
-        where: { email: createUserDto.email },
+        where: { email: createUserDto.email, isDeleted: false },
       });
       if (existingEmail) {
         throw new ConflictException(`Email '${createUserDto.email}' is already registered`);
@@ -34,7 +36,7 @@ export class UsersService {
 
       // Check if wallet address already exists
       const existingWallet = await this.usersRepository.findOne({
-        where: { walletAddress: createUserDto.walletAddress },
+        where: { walletAddress: createUserDto.walletAddress, isDeleted: false },
       });
       if (existingWallet) {
         throw new ConflictException(`Wallet address '${createUserDto.walletAddress}' is already registered`);
@@ -58,10 +60,16 @@ export class UsersService {
     }
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find({
+  async findAll(page = 1, limit = 20): Promise<PaginatedResponse<User>> {
+    const take = Math.max(1, Math.min(limit, 100));
+    const skip = (Math.max(1, page) - 1) * take;
+    const [users, total] = await this.usersRepository.findAndCount({
+      where: { isDeleted: false },
       order: { createdAt: 'DESC' },
+      skip,
+      take,
     });
+    return paginate(users, { page, limit: take, total });
   }
 
   async findOne(id: string): Promise<User> {
@@ -69,7 +77,7 @@ export class UsersService {
       throw new BadRequestException('Invalid user ID format');
     }
 
-    const user = await this.usersRepository.findOne({ where: { id } });
+    const user = await this.usersRepository.findOne({ where: { id, isDeleted: false } });
     
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -79,7 +87,7 @@ export class UsersService {
   }
 
   async findByUsername(username: string): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { username } });
+    const user = await this.usersRepository.findOne({ where: { username, isDeleted: false } });
     
     if (!user) {
       throw new NotFoundException(`User with username '${username}' not found`);
@@ -89,7 +97,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { email } });
+    const user = await this.usersRepository.findOne({ where: { email, isDeleted: false } });
     
     if (!user) {
       throw new NotFoundException(`User with email '${email}' not found`);
@@ -99,7 +107,7 @@ export class UsersService {
   }
 
   async findByWalletAddress(walletAddress: string): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { walletAddress } });
+    const user = await this.usersRepository.findOne({ where: { walletAddress, isDeleted: false } });
     
     if (!user) {
       throw new NotFoundException(`User with wallet address '${walletAddress}' not found`);
@@ -110,7 +118,7 @@ export class UsersService {
 
   async findArtists(): Promise<User[]> {
     return this.usersRepository.find({
-      where: { isArtist: true },
+      where: { isArtist: true, isDeleted: false },
       order: { createdAt: 'DESC' },
     });
   }
@@ -162,16 +170,41 @@ export class UsersService {
     }
   }
 
+
+  // Soft delete
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
-    
+    try {
+      user.deletedAt = new Date();
+      user.isDeleted = true;
+      await this.usersRepository.save(user);
+      this.logger.log(`User soft-deleted: ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to soft-delete user: ${error.message}`);
+      throw new BadRequestException(`Failed to soft-delete user: ${error.message}`);
+    }
+  }
+
+  // Hard delete (admin only)
+  async hardDelete(id: string): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
     try {
       await this.usersRepository.remove(user);
-      this.logger.log(`User deleted successfully: ${id}`);
+      this.logger.log(`User hard-deleted: ${id}`);
     } catch (error) {
-      this.logger.error(`Failed to delete user: ${error.message}`);
-      throw new BadRequestException(`Failed to delete user: ${error.message}`);
+      this.logger.error(`Failed to hard-delete user: ${error.message}`);
+      throw new BadRequestException(`Failed to hard-delete user: ${error.message}`);
     }
+  }
+
+  // Restore (admin only)
+  async restore(id: string): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id }, withDeleted: true });
+    if (!user) throw new NotFoundException('User not found');
+    user.deletedAt = null;
+    user.isDeleted = false;
+    return this.usersRepository.save(user);
   }
 
   private isValidUUID(uuid: string): boolean {

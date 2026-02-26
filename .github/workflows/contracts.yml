@@ -25,6 +25,7 @@ jobs:
           - tip-goal-campaign
           - tip-nft-badge
           - fan-token
+          - artist-allowlist
     
     steps:
       - uses: actions/checkout@v4
@@ -83,6 +84,7 @@ jobs:
           - tip-goal-campaign
           - tip-nft-badge
           - fan-token
+          - artist-allowlist
     
     steps:
       - uses: actions/checkout@v4

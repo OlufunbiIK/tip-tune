@@ -5,6 +5,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitiseAsPlainText, SanitiseAsRichText } from '../../common/utils/sanitise.util';
 
 export class UpdatePlaylistDto {
   @ApiPropertyOptional({
@@ -15,6 +16,7 @@ export class UpdatePlaylistDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
+  @SanitiseAsPlainText()
   name?: string;
 
   @ApiPropertyOptional({
@@ -23,6 +25,7 @@ export class UpdatePlaylistDto {
   })
   @IsOptional()
   @IsString()
+  @SanitiseAsRichText()
   description?: string;
 
   @ApiPropertyOptional({

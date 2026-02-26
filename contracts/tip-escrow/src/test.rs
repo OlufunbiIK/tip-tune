@@ -133,9 +133,10 @@ fn test_create_and_get_escrow() {
     token_admin.mint(&tipper, &1000);
 
     let asset = types::Asset::Token(token.address.clone());
+    let release_time = env.ledger().timestamp() + 100;
 
     let amount = 200;
-    let escrow_id = client.create_escrow(&tipper, &artist, &amount, &asset);
+    let escrow_id = client.create_escrow(&tipper, &artist, &amount, &asset, &release_time);
 
     assert_eq!(token.balance(&tipper), 800);
     assert_eq!(token.balance(&contract_id), 200);

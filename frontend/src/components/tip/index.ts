@@ -24,3 +24,14 @@ export type { ProcessingAnimationProps, ProcessingPhase } from './ProcessingAnim
 
 export { default as TipAnimation } from './TipAnimation';
 export type { TipAnimationProps, TipState } from './TipAnimation';
+
+export { default as GiftTipModal } from './GiftTipModal';
+export type { GiftTipModalProps, GiftTipPayload, GiftTipStep } from './GiftTipModal';
+
+export { default as GiftRecipientSearch } from './GiftRecipientSearch';
+export type { GiftRecipientSearchProps } from './GiftRecipientSearch';
+
+export { default as GiftReceipt } from './GiftReceipt';
+
+export { default as GiftTag } from './GiftTag';
+export type { GiftTagProps } from './GiftTag';
