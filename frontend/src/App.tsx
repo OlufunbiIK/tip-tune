@@ -17,32 +17,35 @@ import AnalyticsDashboard from "./components/analytics/AnalyticsDashboard";
 import ArtistProfilePage from "./pages/ArtistProfilePage";
 import InstallPrompt from "./components/InstallPrompt";
 import LivePerformanceMode from "./components/live-performance/LivePerformanceMode";
+import { PlayerProvider } from "./contexts/PlayerContext";
+import { AmbientMode } from "./components/ambient";
 
 function App() {
   return (
     <div className="min-h-screen bg-app text-app theme-transition">
       <AppHeader />
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/badges" element={<BadgesPage />} />
-          <Route path="/leaderboards" element={<LeaderboardsPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/analytics" element={<AnalyticsDashboard />} />
-          <Route path="/artists/:artistId" element={<ArtistProfilePage />} />
-          <Route path="/tips/history" element={<TipHistoryPage />} />
-          <Route path="/tips/:tipId/receipt" element={<TipReceiptPage />} />
-          <Route path="/live-performance" element={<LivePerformanceMode />} />
-          {/* <Route path="/music-player" element={<MusicPlayer />} /> */}
-          <Route path="*" element={<NotFoundPage />} />
-          <Route path="/onboarding" element={<ArtistOnboarding />} />
-        </Routes>
-
-        <MusicPlayer tracks={tracks} />
-      </main>
+      <PlayerProvider tracks={tracks}>
+        <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/badges" element={<BadgesPage />} />
+            <Route path="/leaderboards" element={<LeaderboardsPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/artists/:artistId" element={<ArtistProfilePage />} />
+            <Route path="/tips/history" element={<TipHistoryPage />} />
+            <Route path="/tips/:tipId/receipt" element={<TipReceiptPage />} />
+            <Route path="/live-performance" element={<LivePerformanceMode />} />
+            <Route path="*" element={<NotFoundPage />} />
+            <Route path="/onboarding" element={<ArtistOnboarding />} />
+          </Routes>
+          <MusicPlayer tracks={tracks} />
+          <AmbientMode />
+        </main>
+      </PlayerProvider>
       <InstallPrompt />
     </div>
   );
