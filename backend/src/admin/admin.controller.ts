@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Post, // <-- Added Post here
   Delete,
   Param,
   Body,
@@ -20,10 +21,17 @@ import { UserFilterDto } from './dto/user-filter.dto';
 import { BanUserDto } from './dto/ban-user.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
 
+// --- NEW IMPORT FOR ISSUE #205 ---
+import { TipReconciliationService } from '../tips/tip-reconciliation.service';
+
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminRoleGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    // --- NEW INJECTION FOR ISSUE #205 ---
+    private readonly reconciliationService: TipReconciliationService,
+  ) {}
 
   @Get('stats/overview')
   @RequirePermission(PERMISSIONS.VIEW_STATS)
@@ -121,5 +129,27 @@ export class AdminController {
   @RequirePermission(PERMISSIONS.VIEW_AUDIT_LOGS)
   async getAuditLogs(@Query('limit') limit?: number) {
     return this.adminService.getAuditLogs(limit);
+  }
+
+  @Post('reconcile/tracks')
+  // Optional: Add a @RequirePermission() decorator here if you have a specific permission for this
+  async triggerFullReconciliation() {
+    this.reconciliationService.reconcileAllTracks();
+    return { message: 'Full track reconciliation process started in the background.' };
+  }
+
+  @Post('reconcile/tracks/:trackId')
+  async triggerSingleReconciliation(@Param('trackId') trackId: string) {
+    await this.reconciliationService.reconcileTrack(trackId);
+    return { message: `Reconciliation completed for track ${trackId}.` };
+  }
+
+  @Get('reconcile/discrepancies')
+  async getDiscrepancies() {
+    const discrepancies = await this.reconciliationService.findDiscrepancies();
+    return { 
+      count: discrepancies.length,
+      discrepancies 
+    };
   }
 }

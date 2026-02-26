@@ -23,6 +23,8 @@ import { NotificationType } from "../notifications/notification.entity";
 import { FeesService } from "../fees/fees.service";
 import { ModerationService } from "../moderation/moderation.service";
 import { BlocksService } from "../blocks/blocks.service";
+// --- NEW ADDITION ---
+import { TipReconciliationService } from "./tip-reconciliation.service";
 
 @Injectable()
 export class TipsService {
@@ -40,6 +42,9 @@ export class TipsService {
     private readonly feesService: FeesService,
     private readonly moderationService: ModerationService,
     private readonly blocksService: BlocksService,
+    // --- NEW ADDITION ---
+    @Inject(forwardRef(() => TipReconciliationService))
+    private readonly tipReconciliationService: TipReconciliationService,
   ) {}
 
   async create(userId: string, createTipDto: CreateTipDto): Promise<Tip> {
@@ -126,7 +131,6 @@ export class TipsService {
     const assetIssuer = paymentOp.asset_issuer;
     const assetType = paymentOp.asset_type;
 
-
     // If user is soft-deleted, anonymize sender
     let user = null;
     let senderAddress = 'anonymous';
@@ -194,7 +198,7 @@ export class TipsService {
 
   async getUserTipHistory(
     userId: string,
-    paginationQuery: PaginationQueryDto,
+    paginationQuery: PaginationQueryDto, // Ensure this type is imported correctly in your codebase
   ): Promise<PaginatedResponseDto<Tip>> {
     const { page = 1, limit = 10, status } = paginationQuery;
     const skip = (page - 1) * limit;
@@ -264,7 +268,18 @@ export class TipsService {
   async updateTipStatus(id: string, status: TipStatus): Promise<Tip> {
     const tip = await this.findOne(id);
     tip.status = status;
-    return this.tipRepository.save(tip);
+    const savedTip = await this.tipRepository.save(tip);
+
+    // --- NEW ADDITION ---
+    // Trigger reconciliation when a tip attached to a track fails or reverses
+    if (tip.trackId && (status === TipStatus.FAILED || status === TipStatus.REVERSED)) {
+      this.tipReconciliationService.reconcileTrack(tip.trackId).catch((err) => {
+        this.logger.error(`Failed to reconcile track ${tip.trackId}:`, err);
+      });
+    }
+    // --------------------
+
+    return savedTip;
   }
 
   async getTipsByTrack(
