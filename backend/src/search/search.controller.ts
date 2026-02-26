@@ -5,6 +5,7 @@ import { SearchQueryDto } from './dto/search-query.dto';
 import { SearchSuggestionsQueryDto } from './dto/search-suggestions-query.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { ArtistStatus } from '../artists/entities/artist.entity';
+import { ThrottleOverride } from '../common/decorators/throttle-override.decorator';
 
 @ApiTags('search')
 @Controller('search')
@@ -13,6 +14,7 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get('suggestions')
+  @ThrottleOverride('SEARCH') // 100 requests per minute
   @ApiOperation({
     summary: 'Autocomplete suggestions',
     description: 'Returns artist and track suggestions for partial query (min 2 characters).',
@@ -28,6 +30,7 @@ export class SearchController {
   }
 
   @Get()
+  @ThrottleOverride('SEARCH') // 100 requests per minute
   @ApiOperation({
     summary: 'Search artists and/or tracks',
     description:

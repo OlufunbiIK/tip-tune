@@ -27,6 +27,7 @@ import { RefreshTokenResponseDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserData } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { ThrottleOverride } from '../common/decorators/throttle-override.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -35,6 +36,7 @@ export class AuthController {
 
   @Post('challenge')
   @Public()
+  @ThrottleOverride('AUTH_ENDPOINTS') // 10 requests per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get challenge message for wallet signing' })
   @ApiBody({
@@ -67,6 +69,7 @@ export class AuthController {
 
   @Post('verify')
   @Public()
+  @ThrottleOverride('AUTH_ENDPOINTS') // 10 requests per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify signed challenge and get JWT tokens' })
   @ApiResponse({
@@ -107,6 +110,7 @@ export class AuthController {
 
   @Post('refresh')
   @Public()
+  @ThrottleOverride('AUTH_ENDPOINTS') // 10 requests per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
   @ApiResponse({
