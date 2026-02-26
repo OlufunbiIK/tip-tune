@@ -23,55 +23,71 @@ const AppHeader: React.FC = () => {
   const closeMenu = () => setIsOpen(false);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-app bg-surface/95 shadow-sm backdrop-blur theme-transition">
-      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6">
-        <div className="flex h-16 items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2" onClick={closeMenu}>
-            <img src="/assets/logo.svg" alt="TipTune" className="h-8 w-auto" />
-            <span className="text-app text-lg font-semibold tracking-tight sm:text-xl">
+    <header className="bg-white sticky top-0 z-30 shadow-sm" role="banner">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
+        <div className="flex items-center justify-between h-16">
+          <Link
+            to="/"
+            className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 rounded-md"
+            onClick={closeMenu}
+            aria-label="TipTune home"
+          >
+            <img
+              src="/assets/logo.svg"
+              alt=""
+              className="h-8 w-auto"
+              aria-hidden="true"
+            />
+            <span className="text-lg sm:text-xl text-deep-slate font-semibold tracking-tight">
               TipTune
             </span>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <nav className="hidden items-center gap-4 text-sm sm:text-base md:flex">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.to;
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${
-                      isActive
-                        ? 'bg-primary-blue text-white'
-                        : 'text-app hover:bg-primary-blue hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+          <nav
+            className="hidden md:flex items-center gap-4 text-sm sm:text-base"
+            aria-label="Main navigation"
+          >
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`px-3 py-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 ${
+                    isActive
+                      ? 'bg-deep-slate text-white'
+                      : 'text-primary-blue hover:text-white hover:bg-primary-blue'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-            <ThemeToggle compact className="hidden md:block" />
-
-            <div className="hidden md:block">
-              <WalletBalanceWidget />
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-md p-2 text-app hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-primary-blue md:hidden"
-              onClick={toggleMenu}
-              aria-label="Toggle navigation"
-            >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-deep-slate hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2"
+            onClick={toggleMenu}
+            aria-expanded={isOpen}
+            aria-controls="mobile-navigation"
+            aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            {isOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
         </div>
 
         {isOpen && (
-          <nav className="animate-slide-down border-t border-app pb-3 md:hidden">
+          <nav
+            id="mobile-navigation"
+            className="md:hidden pb-3 border-t border-gray-100 animate-slide-down"
+            aria-label="Mobile navigation"
+          >
             <ul className="flex flex-col gap-1 pt-3">
               <li className="px-3 py-2">
                 <ThemeToggle compact />
@@ -83,10 +99,11 @@ const AppHeader: React.FC = () => {
                     <Link
                       to={item.to}
                       onClick={closeMenu}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`block px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 ${
                         isActive
-                          ? 'bg-primary-blue text-white'
-                          : 'text-app hover:bg-surface-muted'
+                          ? 'bg-deep-slate text-white'
+                          : 'text-deep-slate hover:bg-gray-100'
                       }`}
                     >
                       {item.label}
