@@ -24,6 +24,7 @@ import { CreateTipDto } from './create-tips.dto';
 import { PaginationQueryDto } from './pagination.dto';
 import { Tip, TipStatus } from './entities/tip.entity';
 import { ModerateMessagePipe } from '../moderation/pipes/moderate-message.pipe';
+import { ThrottleOverride } from '../common/decorators/throttle-override.decorator';
 
 @ApiTags('Tips')
 @Controller('tips')
@@ -31,6 +32,7 @@ export class TipsController {
   constructor(private readonly tipsService: TipsService) { }
 
   @Post()
+  @ThrottleOverride('TIP_SUBMISSION') // 30 requests per minute
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new tip record' })
   @ApiHeader({

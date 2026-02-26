@@ -10,6 +10,9 @@ import { ActivitiesModule } from "../activities/activities.module";
 import { FeesModule } from "../fees/fees.module";
 import { ModerationModule } from "../moderation/moderation.module";
 import { BlocksModule } from "../blocks/blocks.module";
+// --- NEW ADDITIONS ---
+import { TracksModule } from "../tracks/tracks.module";
+import { TipReconciliationService } from "./tip-reconciliation.service";
 
 @Module({
   imports: [
@@ -21,9 +24,12 @@ import { BlocksModule } from "../blocks/blocks.module";
     FeesModule,
     ModerationModule,
     BlocksModule,
+    // --- NEW ADDITION ---
+    forwardRef(() => TracksModule),
   ],
   controllers: [TipsController],
-  providers: [TipsService],
-  exports: [TipsService],
+  // --- NEW ADDITION: Added TipReconciliationService ---
+  providers: [TipsService, TipReconciliationService],
+  exports: [TipsService, TipReconciliationService],
 })
 export class TipsModule {}

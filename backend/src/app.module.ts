@@ -1,7 +1,13 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerStorageRedisService } from "throttler-storage-redis";
+import Redis from "ioredis";
+import { APP_GUARD } from "@nestjs/core";
+import { CustomThrottlerGuard } from "./common/guards/throttler.guard";
+import { CommonModule } from "./common/common.module";
 import { StorageModule } from "./storage/storage.module";
 import { ArtistsModule } from "./artists/artists.module";
 import { TracksModule } from "./tracks/tracks.module";
@@ -36,6 +42,29 @@ import { ArtistStatusModule } from "./artist-status/artist-status.module";
       isGlobal: true,
       envFilePath: ".env",
     }),
+    // Rate Limiting with Redis backend
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: 60000, // 60 seconds
+            limit: configService.get<number>('RATE_LIMIT_PUBLIC', 60), // Default: 60 requests per minute
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis({
+            host: configService.get<string>('REDIS_HOST', 'localhost'),
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get<string>('REDIS_PASSWORD'),
+            db: configService.get<number>('REDIS_DB', 0),
+          }),
+        ),
+      }),
+    }),
+    CommonModule,
     MetricsModule,
     TypeOrmModule.forRoot({
       type: "postgres",
@@ -77,6 +106,11 @@ import { ArtistStatusModule } from "./artist-status/artist-status.module";
     ArtistStatusModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
