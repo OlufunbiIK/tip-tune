@@ -18,6 +18,7 @@ import { TracksService } from './tracks.service';
 import { CreateTrackDto } from './dto/create-track.dto';
 import { TrackFilterDto } from './dto/pagination.dto';
 import { Track } from './entities/track.entity';
+import { ThrottleOverride } from '../common/decorators/throttle-override.decorator';
 
 interface PaginatedResult<T> {
   data: T[];
@@ -33,6 +34,7 @@ export class TracksController {
   constructor(private readonly tracksService: TracksService) {}
 
   @Post()
+  @ThrottleOverride('FILE_UPLOAD') // 5 requests per minute for track creation with file
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Create a new track with optional audio file' })
   @ApiConsumes('multipart/form-data')
