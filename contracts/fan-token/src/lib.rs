@@ -37,7 +37,7 @@ impl FanTokenContract {
             return Err(Error::InvalidAmount);
         }
 
-        if name.len() == 0 || symbol.len() == 0 {
+        if name.is_empty() || symbol.is_empty() {
             return Err(Error::InvalidMetadata);
         }
 
@@ -114,14 +114,13 @@ impl FanTokenContract {
 
         // Update fan balance
         let now = env.ledger().timestamp();
-        let mut fan_balance =
-            storage::get_balance(&env, &artist, &fan).unwrap_or(FanBalance {
-                holder: fan.clone(),
-                artist: artist.clone(),
-                balance: 0,
-                earned_total: 0,
-                last_updated: now,
-            });
+        let mut fan_balance = storage::get_balance(&env, &artist, &fan).unwrap_or(FanBalance {
+            holder: fan.clone(),
+            artist: artist.clone(),
+            balance: 0,
+            earned_total: 0,
+            last_updated: now,
+        });
 
         fan_balance.balance = fan_balance
             .balance
@@ -188,14 +187,13 @@ impl FanTokenContract {
         storage::set_balance(&env, &artist, &from, &from_balance);
 
         // Credit receiver
-        let mut to_balance =
-            storage::get_balance(&env, &artist, &to).unwrap_or(FanBalance {
-                holder: to.clone(),
-                artist: artist.clone(),
-                balance: 0,
-                earned_total: 0,
-                last_updated: now,
-            });
+        let mut to_balance = storage::get_balance(&env, &artist, &to).unwrap_or(FanBalance {
+            holder: to.clone(),
+            artist: artist.clone(),
+            balance: 0,
+            earned_total: 0,
+            last_updated: now,
+        });
 
         to_balance.balance = to_balance
             .balance
@@ -215,11 +213,7 @@ impl FanTokenContract {
     }
 
     /// Return the detailed balance record for a fan.
-    pub fn get_fan_balance(
-        env: Env,
-        artist: Address,
-        fan: Address,
-    ) -> Result<FanBalance, Error> {
+    pub fn get_fan_balance(env: Env, artist: Address, fan: Address) -> Result<FanBalance, Error> {
         storage::get_balance(&env, &artist, &fan).ok_or(Error::InsufficientBalance)
     }
 }

@@ -31,12 +31,8 @@ fn str(env: &Env, s: &str) -> String {
 fn test_create_fan_token_success() {
     let (env, client, artist, _) = setup();
 
-    let token_id = client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &1_000,
-    );
+    let token_id =
+        client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &1_000);
 
     // Token should have been created; verify via metadata
     let _ = token_id;
@@ -56,12 +52,7 @@ fn test_create_fan_token_success() {
 fn test_create_fan_token_zero_supply() {
     let (env, client, artist, _) = setup();
 
-    let token_id = client.create_fan_token(
-        &artist,
-        &str(&env, "ZeroCoin"),
-        &str(&env, "ZRO"),
-        &0,
-    );
+    let token_id = client.create_fan_token(&artist, &str(&env, "ZeroCoin"), &str(&env, "ZRO"), &0);
 
     let token = client.get_fan_token(&artist);
     assert_eq!(token.total_supply, 0);
@@ -79,20 +70,10 @@ fn test_create_fan_token_zero_supply() {
 fn test_create_fan_token_duplicate() {
     let (env, client, artist, _) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "Coin1"),
-        &str(&env, "C1"),
-        &100,
-    );
+    client.create_fan_token(&artist, &str(&env, "Coin1"), &str(&env, "C1"), &100);
 
     // Second creation should fail
-    client.create_fan_token(
-        &artist,
-        &str(&env, "Coin2"),
-        &str(&env, "C2"),
-        &200,
-    );
+    client.create_fan_token(&artist, &str(&env, "Coin2"), &str(&env, "C2"), &200);
 }
 
 #[test]
@@ -100,12 +81,7 @@ fn test_create_fan_token_duplicate() {
 fn test_create_fan_token_negative_supply() {
     let (env, client, artist, _) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "BadCoin"),
-        &str(&env, "BAD"),
-        &-100,
-    );
+    client.create_fan_token(&artist, &str(&env, "BadCoin"), &str(&env, "BAD"), &-100);
 }
 
 #[test]
@@ -113,12 +89,7 @@ fn test_create_fan_token_negative_supply() {
 fn test_create_fan_token_empty_name() {
     let (env, client, artist, _) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, ""),
-        &str(&env, "SYM"),
-        &100,
-    );
+    client.create_fan_token(&artist, &str(&env, ""), &str(&env, "SYM"), &100);
 }
 
 #[test]
@@ -126,12 +97,7 @@ fn test_create_fan_token_empty_name() {
 fn test_create_fan_token_empty_symbol() {
     let (env, client, artist, _) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "Name"),
-        &str(&env, ""),
-        &100,
-    );
+    client.create_fan_token(&artist, &str(&env, "Name"), &str(&env, ""), &100);
 }
 
 // ── mint_for_tip ────────────────────────────────────────────────────
@@ -140,12 +106,7 @@ fn test_create_fan_token_empty_symbol() {
 fn test_mint_for_tip_success() {
     let (env, client, artist, fan) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     // Tip of 50 → 500 fan tokens (10x ratio)
     let minted = client.mint_for_tip(&artist, &fan, &50);
@@ -164,12 +125,7 @@ fn test_mint_for_tip_success() {
 fn test_mint_for_tip_accumulates() {
     let (env, client, artist, fan) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &1_000,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &1_000);
 
     client.mint_for_tip(&artist, &fan, &10); // +100
     client.mint_for_tip(&artist, &fan, &20); // +200
@@ -190,12 +146,7 @@ fn test_mint_for_tip_accumulates() {
 fn test_mint_for_tip_zero_amount() {
     let (env, client, artist, fan) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &0);
 }
@@ -205,12 +156,7 @@ fn test_mint_for_tip_zero_amount() {
 fn test_mint_for_tip_negative_amount() {
     let (env, client, artist, fan) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &-10);
 }
@@ -242,12 +188,7 @@ fn test_transfer_fan_tokens_success() {
     let (env, client, artist, fan) = setup();
     let fan2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &100); // fan gets 1000 tokens
 
@@ -263,12 +204,7 @@ fn test_transfer_preserves_earned_total() {
     let (env, client, artist, fan) = setup();
     let fan2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &100); // 1000 tokens
 
@@ -291,12 +227,7 @@ fn test_transfer_insufficient_balance() {
     let (env, client, artist, fan) = setup();
     let fan2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &10); // 100 tokens
 
@@ -308,12 +239,7 @@ fn test_transfer_insufficient_balance() {
 fn test_transfer_to_self() {
     let (env, client, artist, fan) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &10);
 
@@ -326,12 +252,7 @@ fn test_transfer_zero_amount() {
     let (env, client, artist, fan) = setup();
     let fan2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &10);
 
@@ -354,14 +275,9 @@ fn test_total_supply_tracked_across_mints() {
     let (env, client, artist, fan) = setup();
     let fan2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &500,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &500);
 
-    client.mint_for_tip(&artist, &fan, &10);  // +100
+    client.mint_for_tip(&artist, &fan, &10); // +100
     client.mint_for_tip(&artist, &fan2, &25); // +250
 
     let token = client.get_fan_token(&artist);
@@ -375,12 +291,7 @@ fn test_total_supply_tracked_across_mints() {
 fn test_create_emits_event() {
     let (env, client, artist, _) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &100,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &100);
 
     let events = env.events().all();
     // At least one event should have been published
@@ -391,12 +302,7 @@ fn test_create_emits_event() {
 fn test_mint_emits_event() {
     let (env, client, artist, fan) = setup();
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &10);
 
@@ -409,12 +315,7 @@ fn test_transfer_emits_event() {
     let (env, client, artist, fan) = setup();
     let fan2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &10);
 
@@ -431,22 +332,12 @@ fn test_multiple_artists_independent() {
     let (env, client, artist, fan) = setup();
     let artist2 = Address::generate(&env);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "Coin1"),
-        &str(&env, "C1"),
-        &100,
-    );
+    client.create_fan_token(&artist, &str(&env, "Coin1"), &str(&env, "C1"), &100);
 
-    client.create_fan_token(
-        &artist2,
-        &str(&env, "Coin2"),
-        &str(&env, "C2"),
-        &200,
-    );
+    client.create_fan_token(&artist2, &str(&env, "Coin2"), &str(&env, "C2"), &200);
 
-    client.mint_for_tip(&artist, &fan, &10);  // 100 tokens of artist1
-    client.mint_for_tip(&artist2, &fan, &5);  // 50 tokens of artist2
+    client.mint_for_tip(&artist, &fan, &10); // 100 tokens of artist1
+    client.mint_for_tip(&artist2, &fan, &5); // 50 tokens of artist2
 
     assert_eq!(client.get_balance(&artist, &fan), 100);
     assert_eq!(client.get_balance(&artist2, &fan), 50);
@@ -464,12 +355,7 @@ fn test_last_updated_tracks_time() {
 
     env.ledger().with_mut(|li| li.timestamp = 1000);
 
-    client.create_fan_token(
-        &artist,
-        &str(&env, "ArtistCoin"),
-        &str(&env, "ART"),
-        &0,
-    );
+    client.create_fan_token(&artist, &str(&env, "ArtistCoin"), &str(&env, "ART"), &0);
 
     client.mint_for_tip(&artist, &fan, &10);
 

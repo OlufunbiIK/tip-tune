@@ -24,6 +24,7 @@ jobs:
           - auto-royalty-distribution
           - tip-goal-campaign
           - tip-nft-badge
+          - fan-token
     
     steps:
       - uses: actions/checkout@v4
@@ -81,6 +82,7 @@ jobs:
           - auto-royalty-distribution
           - tip-goal-campaign
           - tip-nft-badge
+          - fan-token
     
     steps:
       - uses: actions/checkout@v4
