@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ScheduleModule } from "@nestjs/schedule";
@@ -35,6 +35,7 @@ import { HealthModule } from "./health/health.module";
 import { VersionModule } from "./version/version.module";
 import { ArtistStatusModule } from "./artist-status/artist-status.module";
 import { CustomThrottlerRedisStorage } from "./custom-throttler-storage-redis";
+import { VaryAcceptEncodingMiddleware } from "./common/middleware/vary-accept-encoding.middleware";
 
 @Module({
   imports: [
@@ -115,4 +116,8 @@ import { CustomThrottlerRedisStorage } from "./custom-throttler-storage-redis";
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(VaryAcceptEncodingMiddleware).forRoutes("*");
+  }
+}
