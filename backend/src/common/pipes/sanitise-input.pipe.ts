@@ -2,6 +2,7 @@ import {
   ArgumentMetadata,
   Injectable,
   PipeTransform,
+  Type,
 } from '@nestjs/common';
 import {
   SANITISE_MODE_METADATA,
@@ -24,7 +25,7 @@ export class SanitiseInputPipe implements PipeTransform {
 
   private sanitiseValue(
     value: unknown,
-    metatype?: Function,
+    metatype?: Type<unknown>,
     propertyName?: string,
   ): unknown {
     if (typeof value === 'string') {
@@ -51,7 +52,7 @@ export class SanitiseInputPipe implements PipeTransform {
   }
 
   private resolveMode(
-    metatype?: Function,
+    metatype?: Type<unknown>,
     propertyName?: string,
   ): SanitiseMode {
     if (metatype?.prototype && propertyName) {
@@ -74,9 +75,9 @@ export class SanitiseInputPipe implements PipeTransform {
   }
 
   private getNestedMetatype(
-    metatype: Function | undefined,
+    metatype: Type<unknown> | undefined,
     propertyName: string,
-  ): Function | undefined {
+  ): Type<unknown> | undefined {
     if (!metatype?.prototype) {
       return undefined;
     }
@@ -85,7 +86,7 @@ export class SanitiseInputPipe implements PipeTransform {
       'design:type',
       metatype.prototype,
       propertyName,
-    ) as Function | undefined;
+    ) as Type<unknown> | undefined;
 
     if (
       !designType ||

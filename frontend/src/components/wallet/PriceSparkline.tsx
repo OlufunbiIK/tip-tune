@@ -37,7 +37,10 @@ const PriceSparkline: React.FC<PriceSparklineProps> = ({ data }) => {
           <XAxis dataKey="time" hide />
           <YAxis domain={['auto', 'auto']} hide />
           <Tooltip
-            formatter={(value: number) => [`$${value.toFixed(4)}`, 'Price']}
+            formatter={(value) => [
+              `$${Number(value ?? 0).toFixed(4)}`,
+              'Price',
+            ]}
             labelFormatter={() => ''}
             contentStyle={{
               backgroundColor: 'rgb(15,23,42)',

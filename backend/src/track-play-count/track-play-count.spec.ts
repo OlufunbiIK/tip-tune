@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { TrackPlayCountService } from './track-play-count.service';
-import { TrackPlay, PlaySource } from './entities/track-play.entity';
+import { TrackPlayCountService } from './play-count.service';
+import { TrackPlay, PlaySource } from './track-play.entity';
 
 const mockRepo = () => ({
   create: jest.fn(),

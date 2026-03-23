@@ -38,24 +38,30 @@ jobs:
       - name: Run Tests (all contracts)
         working-directory: contracts
         run: |
-          for dir in */; do
+          set -euo pipefail
+          while IFS= read -r manifest; do
+            dir=$(dirname "$manifest")
             echo "Testing $dir"
             (cd "$dir" && cargo test --verbose)
-          done
+          done < <(find . -name Cargo.toml -not -path '*/target/*' | sort)
 
       - name: Build All Contracts
         working-directory: contracts
         run: |
-          for dir in */; do
+          set -euo pipefail
+          while IFS= read -r manifest; do
+            dir=$(dirname "$manifest")
             echo "Building $dir"
             (cd "$dir" && cargo build --target wasm32-unknown-unknown --release)
-          done
+          done < <(find . -name Cargo.toml -not -path '*/target/*' | sort)
 
       - name: Lint All Contracts
         working-directory: contracts
         run: |
-          for dir in */; do
+          set -euo pipefail
+          while IFS= read -r manifest; do
+            dir=$(dirname "$manifest")
             echo "Linting $dir"
             (cd "$dir" && cargo clippy -- -D warnings)
             (cd "$dir" && cargo fmt -- --check)
-          done
+          done < <(find . -name Cargo.toml -not -path '*/target/*' | sort)

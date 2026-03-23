@@ -53,8 +53,8 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     if (isAuthAware && this.isAuthenticated(request)) {
       // Increase limit for authenticated users
       const { context, throttler } = requestProps;
-      let limit = requestProps.limit;
-      let ttl = requestProps.ttl;
+      const limit = requestProps.limit;
+      const ttl = requestProps.ttl;
     }
 
     try {
@@ -84,7 +84,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
    * Check if request is authenticated
    */
   private isAuthenticated(request: any): boolean {
-    return !!(request.user || request.headers.authorization);
+    return !!(request.user || request.headers?.authorization);
   }
 
   /**

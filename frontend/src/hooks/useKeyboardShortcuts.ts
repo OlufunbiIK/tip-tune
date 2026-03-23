@@ -31,10 +31,12 @@ const isShortcutMatch = (
 
 export const useKeyboardShortcuts = (
   shortcuts: KeyboardShortcut[],
-  options: UseKeyboardShortcutsOptions['enabled'] | UseKeyboardShortcutsOptions = {}
+  options: boolean | UseKeyboardShortcutsOptions = true,
 ) => {
   const config: UseKeyboardShortcutsOptions =
-    typeof options === 'boolean' ? { enabled: options, shortcuts } : { enabled: true, shortcuts, ...options };
+    typeof options === 'boolean'
+      ? { enabled: options, shortcuts }
+      : { enabled: options.enabled ?? true, ...options, shortcuts };
   
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;

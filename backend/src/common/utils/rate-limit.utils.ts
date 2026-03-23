@@ -72,7 +72,7 @@ export function formatResetTime(ttl: number): number {
 export function isRequestAuthenticated(request: any): boolean {
   return !!(
     request.user ||
-    request.headers.authorization ||
+    request.headers?.authorization ||
     request.cookies?.access_token
   );
 }

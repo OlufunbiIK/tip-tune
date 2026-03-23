@@ -27,7 +27,7 @@ export class WaveformService {
       ['trackId']
     );
     
-    let waveform = await this.waveformRepository.findOne({ where: { trackId } });
+    const waveform = await this.waveformRepository.findOne({ where: { trackId } });
 
     try {
       const { waveformData, peakAmplitude } = await this.generatorService.generateWaveform(audioFilePath, dataPoints);

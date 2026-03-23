@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// Tests that use `jest.*` APIs run under Vitest via this alias.
+(globalThis as unknown as { jest: typeof vi }).jest = vi;
 
 if (!window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {

@@ -140,12 +140,8 @@ const TipReceiptPage: React.FC = () => {
   /* ---- Derived values ---- */
   const walletBalance = balance
     ? {
-        xlm: parseFloat(
-          balance.find((b) => b.asset === 'native')?.balance ?? '0',
-        ),
-        usdc: parseFloat(
-          balance.find((b) => b.asset.startsWith('USDC'))?.balance ?? '0',
-        ),
+        xlm: parseFloat(balance.balance ?? '0'),
+        usdc: 0,
       }
     : undefined;
 

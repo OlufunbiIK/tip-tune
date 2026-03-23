@@ -119,15 +119,16 @@ const LivePerformanceMode: React.FC = () => {
       const tip = payload.data;
       if (!tip || typeof tip.amount !== 'number') return;
 
+      const amount: number = tip.amount;
       const asset = tip.asset || 'XLM';
       const isXlmTip = asset.toUpperCase() === 'XLM';
       const tipper = tip.isAnonymous ? 'Anonymous fan' : truncateAddress(tip.senderAddress || 'Guest fan', 5, 4);
-      const isLargeTip = isXlmTip && tip.amount >= LARGE_TIP_THRESHOLD_XLM;
+      const isLargeTip = isXlmTip && amount >= LARGE_TIP_THRESHOLD_XLM;
 
       const alert: LiveTipEvent = {
         id: tip.tipId || `tip-${Date.now()}`,
         tipperName: tipper,
-        amount: tip.amount,
+        amount,
         asset,
         createdAt: typeof tip.createdAt === 'string' ? tip.createdAt : new Date().toISOString(),
         isLargeTip,
@@ -136,8 +137,12 @@ const LivePerformanceMode: React.FC = () => {
       setSession((prev) => {
         const existing = prev.leaderboard.find((entry) => entry.tipperName === tipper);
         const updatedEntry: LeaderboardEntry = existing
-          ? { ...existing, total: existing.total + (isXlmTip ? tip.amount : 0), tipCount: existing.tipCount + 1 }
-          : { tipperName: tipper, total: isXlmTip ? tip.amount : 0, tipCount: 1 };
+          ? {
+              ...existing,
+              total: (existing.total ?? 0) + (isXlmTip ? amount : 0),
+              tipCount: existing.tipCount + 1,
+            }
+          : { tipperName: tipper, total: isXlmTip ? amount : 0, tipCount: 1 };
 
         const leaderboard = prev.leaderboard
           .filter((entry) => entry.tipperName !== tipper)
@@ -147,8 +152,8 @@ const LivePerformanceMode: React.FC = () => {
         return {
           ...prev,
           tipCount: prev.tipCount + 1,
-          sessionTotalXlm: prev.sessionTotalXlm + (isXlmTip ? tip.amount : 0),
-          hypeScore: Math.min(100, prev.hypeScore + Math.max(8, tip.amount * 1.2)),
+          sessionTotalXlm: prev.sessionTotalXlm + (isXlmTip ? amount : 0),
+          hypeScore: Math.min(100, prev.hypeScore + Math.max(8, amount * 1.2)),
           alerts: [alert, ...prev.alerts].slice(0, MAX_ALERTS),
           leaderboard,
         };

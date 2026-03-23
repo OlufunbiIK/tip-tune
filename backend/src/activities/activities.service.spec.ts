@@ -22,6 +22,7 @@ describe("ActivitiesService", () => {
     metadata: { trackTitle: "Test Track" },
     isSeen: false,
     createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   const mockUser = {
@@ -285,6 +286,7 @@ describe("ActivitiesService", () => {
       const metadata = { amount: 10.5, toArtistId: "artist-id" };
       const createdActivity = {
         ...mockActivity,
+        entityId: "tip-id",
         activityType: ActivityType.TIP_SENT,
         entityType: EntityType.TIP,
         metadata: { ...metadata, timestamp: expect.any(String) },
@@ -305,6 +307,7 @@ describe("ActivitiesService", () => {
       const metadata = { amount: 10.5, fromUserId: "user-id" };
       const createdActivity = {
         ...mockActivity,
+        entityId: "tip-id",
         activityType: ActivityType.TIP_RECEIVED,
         entityType: EntityType.TIP,
         metadata: { ...metadata, timestamp: expect.any(String) },
@@ -329,6 +332,7 @@ describe("ActivitiesService", () => {
       const metadata = { artistName: "Test Artist" };
       const createdActivity = {
         ...mockActivity,
+        entityId: "artist-id",
         activityType: ActivityType.ARTIST_FOLLOWED,
         entityType: EntityType.ARTIST,
         metadata: { ...metadata, timestamp: expect.any(String) },
@@ -353,6 +357,7 @@ describe("ActivitiesService", () => {
       const metadata = { followerName: "Test Follower" };
       const createdActivity = {
         ...mockActivity,
+        entityId: "follower-id",
         activityType: ActivityType.NEW_FOLLOWER,
         entityType: EntityType.ARTIST,
         metadata: { ...metadata, timestamp: expect.any(String) },

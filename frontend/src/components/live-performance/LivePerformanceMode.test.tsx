@@ -29,9 +29,10 @@ describe('LivePerformanceMode', () => {
 
     const tipHandlerCall = mockSocket.on.mock.calls.find((call) => call[0] === 'tip_notification');
     expect(tipHandlerCall).toBeDefined();
+    const tipHandler = tipHandlerCall!;
 
     await act(async () => {
-      const callback = tipHandlerCall[1] as (payload: unknown) => void;
+      const callback = tipHandler[1] as (payload: unknown) => void;
       callback({
         type: 'tip_received',
         data: {
@@ -62,7 +63,8 @@ describe('LivePerformanceMode', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
 
     const tipHandlerCall = mockSocket.on.mock.calls.find((call) => call[0] === 'tip_notification');
-    const callback = tipHandlerCall[1] as (payload: unknown) => void;
+    expect(tipHandlerCall).toBeDefined();
+    const callback = tipHandlerCall![1] as (payload: unknown) => void;
 
     await act(async () => {
       callback({
