@@ -12,32 +12,30 @@ console.log('=== Compression Configuration Verification ===\n');
 const mainTsPath = path.join(__dirname, 'src', 'main.ts');
 const mainTsContent = fs.readFileSync(mainTsPath, 'utf8');
 
-// Check 1: Compression package is imported
-const hasCompressionImport = mainTsContent.includes("import * as compression from 'compression'");
-const hasZlibImport = mainTsContent.includes("import * as zlib from 'zlib'");
+// Check 1: Shared compression middleware is imported
+const hasCompressionFactoryImport = mainTsContent.includes("createCompressionMiddleware");
 
-console.log('✓ Check 1: Compression imports');
-console.log(`  - compression package: ${hasCompressionImport ? '✓ PASS' : '✗ FAIL'}`);
-console.log(`  - zlib package: ${hasZlibImport ? '✓ PASS' : '✗ FAIL'}`);
+console.log('✓ Check 1: Compression middleware import');
+console.log(`  - createCompressionMiddleware import: ${hasCompressionFactoryImport ? '✓ PASS' : '✗ FAIL'}`);
 
-// Check 2: shouldCompress filter function exists
-const hasShouldCompressFunction = mainTsContent.includes('function shouldCompress');
-const hasBinaryPatterns = mainTsContent.includes('tracks') &&
-                          mainTsContent.includes('stream') &&
-                          mainTsContent.includes('download') &&
-                          mainTsContent.includes('storage');
+// Check 2: Shared middleware file contains binary endpoint filter
+const compressionFilePath = path.join(__dirname, 'src', 'common', 'middleware', 'response-compression.middleware.ts');
+const compressionFileContent = fs.readFileSync(compressionFilePath, 'utf8');
+const hasShouldCompressFunction = compressionFileContent.includes('export function shouldCompress');
+const hasBinaryPatterns = compressionFileContent.includes('/files/upload') &&
+                          compressionFileContent.includes('/files/[^/]+/stream') &&
+                          compressionFileContent.includes('/files/[^/]+/?');
 
 console.log('\n✓ Check 2: Binary endpoint filter');
 console.log(`  - shouldCompress function: ${hasShouldCompressFunction ? '✓ PASS' : '✗ FAIL'}`);
 console.log(`  - Binary endpoint patterns: ${hasBinaryPatterns ? '✓ PASS' : '✗ FAIL'}`);
 
 // Check 3: Compression middleware is configured
-const hasCompressionMiddleware = mainTsContent.includes('app.use(compression(');
-const hasThresholdConfig = mainTsContent.includes("threshold: '1kb'") || mainTsContent.includes('threshold: 1024');
-const hasBrotliConfig = mainTsContent.includes('brotli: {') && 
-                        mainTsContent.includes('enabled: true') &&
-                        mainTsContent.includes('BROTLI_PARAM_QUALITY');
-const hasFilterConfig = mainTsContent.includes('filter: shouldCompress');
+const hasCompressionMiddleware = mainTsContent.includes('app.use(createCompressionMiddleware())');
+const hasThresholdConfig = compressionFileContent.includes('threshold: 1024');
+const hasBrotliConfig = compressionFileContent.includes('brotli: {') &&
+                        compressionFileContent.includes('BROTLI_PARAM_QUALITY');
+const hasFilterConfig = compressionFileContent.includes('filter: shouldCompress');
 
 console.log('\n✓ Check 3: Compression middleware configuration');
 console.log(`  - Middleware registered: ${hasCompressionMiddleware ? '✓ PASS' : '✗ FAIL'}`);
@@ -70,8 +68,7 @@ console.log(`  - @types/compression: ${hasCompressionTypes ? '✓ PASS' : '✗ F
 
 // Summary
 const allChecks = [
-  hasCompressionImport,
-  hasZlibImport,
+  hasCompressionFactoryImport,
   hasShouldCompressFunction,
   hasBinaryPatterns,
   hasCompressionMiddleware,
