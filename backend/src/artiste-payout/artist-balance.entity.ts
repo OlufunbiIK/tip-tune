@@ -24,6 +24,9 @@ export class ArtistBalance {
   @Column({ type: 'decimal', precision: 18, scale: 7, default: 0 })
   pendingXlm: number;
 
+  @Column({ type: 'decimal', precision: 18, scale: 7, default: 0 })
+  pendingUsdc: number;
+
   @UpdateDateColumn()
   lastUpdated: Date;
 }

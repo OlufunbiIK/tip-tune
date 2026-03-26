@@ -4,16 +4,19 @@ import { ConfigModule } from "@nestjs/config";
 import { PayoutsService } from "./payouts.service";
 import { PayoutsController } from "./payouts.controller";
 import { PayoutProcessorService } from "./payout-processor.service";
+import { PayoutReconciliationService } from "./payout-reconciliation.service";
+import { PayoutReconciliationScheduler } from "./payout-reconciliation.scheduler";
 import { PayoutRequest } from "./payout-request.entity";
 import { ArtistBalance } from "./artist-balance.entity";
+import { ArtistBalanceAudit } from "./artist-balance-audit.entity";
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([PayoutRequest, ArtistBalance]),
+    TypeOrmModule.forFeature([PayoutRequest, ArtistBalance, ArtistBalanceAudit]),
   ],
   controllers: [PayoutsController],
-  providers: [PayoutsService, PayoutProcessorService],
-  exports: [PayoutsService],
+  providers: [PayoutsService, PayoutProcessorService, PayoutReconciliationService, PayoutReconciliationScheduler],
+  exports: [PayoutsService, PayoutReconciliationService],
 })
 export class PayoutsModule {}

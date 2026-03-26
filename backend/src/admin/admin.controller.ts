@@ -23,6 +23,7 @@ import { ResolveReportDto } from './dto/resolve-report.dto';
 
 // --- NEW IMPORT FOR ISSUE #205 ---
 import { TipReconciliationService } from '../tips/tip-reconciliation.service';
+import { PayoutReconciliationService } from '../artiste-payout/payout-reconciliation.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminRoleGuard)
@@ -31,6 +32,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     // --- NEW INJECTION FOR ISSUE #205 ---
     private readonly reconciliationService: TipReconciliationService,
+    private readonly payoutReconciliationService: PayoutReconciliationService,
   ) {}
 
   @Get('stats/overview')
@@ -147,9 +149,27 @@ export class AdminController {
   @Get('reconcile/discrepancies')
   async getDiscrepancies() {
     const discrepancies = await this.reconciliationService.findDiscrepancies();
-    return { 
+    return {
       count: discrepancies.length,
-      discrepancies 
+      discrepancies,
     };
+  }
+
+  @Post('reconcile/payouts')
+  async reconcileAllPayouts() {
+    const discrepancies = await this.payoutReconciliationService.reconcileAllArtists(false);
+    return { count: discrepancies.length, discrepancies };
+  }
+
+  @Post('reconcile/payouts/:artistId')
+  async reconcileArtistPayout(@Param('artistId') artistId: string) {
+    const discrepancies = await this.payoutReconciliationService.reconcileArtist(artistId, false);
+    return { count: discrepancies.length, discrepancies };
+  }
+
+  @Post('reconcile/payouts/:artistId/repair')
+  async repairArtistPayout(@Param('artistId') artistId: string) {
+    const discrepancies = await this.payoutReconciliationService.reconcileArtist(artistId, true);
+    return { count: discrepancies.length, discrepancies };
   }
 }

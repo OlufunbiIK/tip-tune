@@ -10,6 +10,10 @@ import { Artist } from '../artists/entities/artist.entity';
 import { Track } from '../tracks/entities/track.entity';
 import { Report } from '../reports/entities/report.entity';
 import { AuthModule } from '../auth/auth.module';
+import { ArtistBalance } from '../artiste-payout/artist-balance.entity';
+import { PayoutRequest } from '../artiste-payout/payout-request.entity';
+import { Tip } from '../tips/entities/tip.entity';
+import { PayoutReconciliationService } from '../artiste-payout/payout-reconciliation.service';
 
 @Module({
   imports: [
@@ -20,11 +24,14 @@ import { AuthModule } from '../auth/auth.module';
       Artist,
       Track,
       Report,
+      ArtistBalance,
+      PayoutRequest,
+      Tip,
     ]),
     AuthModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, AdminRoleGuard],
+  providers: [AdminService, AdminRoleGuard, PayoutReconciliationService],
   exports: [AdminService, AdminRoleGuard],
 })
 export class AdminModule {}

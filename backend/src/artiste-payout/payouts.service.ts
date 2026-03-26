@@ -9,6 +9,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource, QueryRunner } from "typeorm";
 import { ConfigService } from "@nestjs/config";
 import { ArtistBalance } from "./artist-balance.entity";
+import { ArtistBalanceAudit, ArtistBalanceAuditType } from "./artist-balance-audit.entity";
 import { PayoutRequest, PayoutStatus } from "./payout-request.entity";
 import { CreatePayoutDto } from "./create-payout.dto";
 
@@ -23,6 +24,8 @@ export class PayoutsService {
     private readonly payoutRepo: Repository<PayoutRequest>,
     @InjectRepository(ArtistBalance)
     private readonly balanceRepo: Repository<ArtistBalance>,
+    @InjectRepository(ArtistBalanceAudit)
+    private readonly auditRepo: Repository<ArtistBalanceAudit>,
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
   ) {
@@ -64,6 +67,14 @@ export class PayoutsService {
       ? qr.manager.getRepository(ArtistBalance)
       : this.balanceRepo;
 
+    const existing = await repo.findOne({ where: { artistId } });
+    if (!existing) {
+      throw new NotFoundException(`Balance not found for artist ${artistId}`);
+    }
+
+    const beforeBalance =
+      assetCode === "XLM" ? Number(existing.xlmBalance) : Number(existing.usdcBalance);
+
     await repo
       .createQueryBuilder()
       .update(ArtistBalance)
@@ -74,6 +85,23 @@ export class PayoutsService {
       )
       .where("artistId = :artistId", { artistId })
       .execute();
+
+    const after = await repo.findOne({ where: { artistId } });
+    if (after) {
+      await this.auditRepo.save(
+        this.auditRepo.create({
+          artistId,
+          assetCode,
+          eventType: ArtistBalanceAuditType.TIP_CREDIT,
+          amount,
+          balanceBefore: beforeBalance,
+          balanceAfter:
+            assetCode === "XLM" ? Number(after.xlmBalance) : Number(after.usdcBalance),
+          pendingBefore: assetCode === "XLM" ? Number(existing.pendingXlm) : Number(existing.pendingUsdc),
+          pendingAfter: assetCode === "XLM" ? Number(after.pendingXlm) : Number(after.pendingUsdc),
+        }),
+      );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -127,7 +155,7 @@ export class PayoutsService {
       const available =
         assetCode === "XLM"
           ? Number(balance.xlmBalance) - Number(balance.pendingXlm)
-          : Number(balance.usdcBalance);
+          : Number(balance.usdcBalance) - Number(balance.pendingUsdc);
 
       if (available < amount) {
         throw new BadRequestException(
@@ -142,6 +170,12 @@ export class PayoutsService {
           .update({ artistId }, {
             pendingXlm: () => `"pendingXlm" + ${amount}`,
           } as any);
+      } else {
+        await qr.manager
+          .getRepository(ArtistBalance)
+          .update({ artistId }, {
+            pendingUsdc: () => `"pendingUsdc" + ${amount}`,
+          } as any);
       }
 
       const payout = qr.manager.getRepository(PayoutRequest).create({
@@ -153,6 +187,39 @@ export class PayoutsService {
       });
 
       const saved = await qr.manager.getRepository(PayoutRequest).save(payout);
+
+      const afterBalance = await qr.manager
+        .getRepository(ArtistBalance)
+        .findOne({ where: { artistId } });
+
+      if (afterBalance) {
+        await this.auditRepo.save(
+          this.auditRepo.create({
+            artistId,
+            assetCode,
+            eventType: ArtistBalanceAuditType.PAYOUT_REQUEST,
+            amount: amount * -1,
+            payoutRequestId: saved.id,
+            balanceBefore:
+              assetCode === "XLM"
+                ? Number(balance.xlmBalance)
+                : Number(balance.usdcBalance),
+            balanceAfter:
+              assetCode === "XLM"
+                ? Number(afterBalance.xlmBalance)
+                : Number(afterBalance.usdcBalance),
+            pendingBefore:
+              assetCode === "XLM"
+                ? Number(balance.pendingXlm)
+                : Number(balance.pendingUsdc),
+            pendingAfter:
+              assetCode === "XLM"
+                ? Number(afterBalance.pendingXlm)
+                : Number(afterBalance.pendingUsdc),
+          }),
+        );
+      }
+
       await qr.commitTransaction();
       return saved;
     } catch (err) {
@@ -247,6 +314,10 @@ export class PayoutsService {
     if (!payout) throw new NotFoundException(`Payout ${payoutId} not found`);
 
     // Deduct from real balance and release pending reserve
+    const currentBalance = await qr.manager
+      .getRepository(ArtistBalance)
+      .findOne({ where: { artistId: payout.artistId } });
+
     if (payout.assetCode === "XLM") {
       await qr.manager
         .getRepository(ArtistBalance)
@@ -263,9 +334,44 @@ export class PayoutsService {
         .getRepository(ArtistBalance)
         .createQueryBuilder()
         .update()
-        .set({ usdcBalance: () => `"usdcBalance" - ${payout.amount}` })
+        .set({
+          usdcBalance: () => `"usdcBalance" - ${payout.amount}`,
+          pendingUsdc: () => `"pendingUsdc" - ${payout.amount}`,
+        })
         .where("artistId = :id", { id: payout.artistId })
         .execute();
+    }
+
+    const updatedBalance = await qr.manager
+      .getRepository(ArtistBalance)
+      .findOne({ where: { artistId: payout.artistId } });
+
+    if (currentBalance && updatedBalance) {
+      await this.auditRepo.save(
+        this.auditRepo.create({
+          artistId: payout.artistId,
+          assetCode: payout.assetCode,
+          eventType: ArtistBalanceAuditType.PAYOUT_COMPLETED,
+          amount: payout.amount * -1,
+          payoutRequestId: payoutId,
+          balanceBefore:
+            payout.assetCode === "XLM"
+              ? Number(currentBalance.xlmBalance)
+              : Number(currentBalance.usdcBalance),
+          balanceAfter:
+            payout.assetCode === "XLM"
+              ? Number(updatedBalance.xlmBalance)
+              : Number(updatedBalance.usdcBalance),
+          pendingBefore:
+            payout.assetCode === "XLM"
+              ? Number(currentBalance.pendingXlm)
+              : Number(currentBalance.pendingUsdc),
+          pendingAfter:
+            payout.assetCode === "XLM"
+              ? Number(updatedBalance.pendingXlm)
+              : Number(updatedBalance.pendingUsdc),
+        }),
+      );
     }
 
     await qr.manager.getRepository(PayoutRequest).update(payoutId, {
@@ -287,7 +393,10 @@ export class PayoutsService {
 
     if (!payout) return;
 
-    // Release pending reserve
+    const currentBalance = await qr.manager
+      .getRepository(ArtistBalance)
+      .findOne({ where: { artistId: payout.artistId } });
+
     if (payout.assetCode === "XLM") {
       await qr.manager
         .getRepository(ArtistBalance)
@@ -296,6 +405,46 @@ export class PayoutsService {
         .set({ pendingXlm: () => `"pendingXlm" - ${payout.amount}` })
         .where("artistId = :id", { id: payout.artistId })
         .execute();
+    } else {
+      await qr.manager
+        .getRepository(ArtistBalance)
+        .createQueryBuilder()
+        .update()
+        .set({ pendingUsdc: () => `"pendingUsdc" - ${payout.amount}` })
+        .where("artistId = :id", { id: payout.artistId })
+        .execute();
+    }
+
+    const updatedBalance = await qr.manager
+      .getRepository(ArtistBalance)
+      .findOne({ where: { artistId: payout.artistId } });
+
+    if (currentBalance && updatedBalance) {
+      await this.auditRepo.save(
+        this.auditRepo.create({
+          artistId: payout.artistId,
+          assetCode: payout.assetCode,
+          eventType: ArtistBalanceAuditType.PAYOUT_FAILED,
+          amount: 0,
+          payoutRequestId: payoutId,
+          balanceBefore:
+            payout.assetCode === "XLM"
+              ? Number(currentBalance.xlmBalance)
+              : Number(currentBalance.usdcBalance),
+          balanceAfter:
+            payout.assetCode === "XLM"
+              ? Number(updatedBalance.xlmBalance)
+              : Number(updatedBalance.usdcBalance),
+          pendingBefore:
+            payout.assetCode === "XLM"
+              ? Number(currentBalance.pendingXlm)
+              : Number(currentBalance.pendingUsdc),
+          pendingAfter:
+            payout.assetCode === "XLM"
+              ? Number(updatedBalance.pendingXlm)
+              : Number(updatedBalance.pendingUsdc),
+        }),
+      );
     }
 
     await qr.manager.getRepository(PayoutRequest).update(payoutId, {
