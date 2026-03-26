@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { ReportAction, ReportStatus } from '../entities/report.entity';
+import { ReportAction, ReportPriority, ReportStatus } from '../entities/report.entity';
 
 export class UpdateReportStatusDto {
   @IsEnum(ReportStatus)
@@ -12,4 +12,8 @@ export class UpdateReportStatusDto {
   @IsEnum(ReportAction)
   @IsOptional()
   action?: ReportAction;
+
+  @IsEnum(ReportPriority)
+  @IsOptional()
+  priority?: ReportPriority;
 }

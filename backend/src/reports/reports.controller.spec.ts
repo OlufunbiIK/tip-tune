@@ -11,6 +11,8 @@ const mockReportsService = () => ({
   findAll: jest.fn(),
   findOne: jest.fn(),
   updateStatus: jest.fn(),
+  assignReport: jest.fn(),
+  escalateReport: jest.fn(),
 });
 
 describe('ReportsController', () => {
@@ -93,6 +95,37 @@ describe('ReportsController', () => {
       const result = await controller.updateStatus(id, updateDto, admin);
 
       expect(service.updateStatus).toHaveBeenCalledWith(id, updateDto, admin);
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('assign', () => {
+    it('should assign a report', async () => {
+      const id = 'report-id';
+      const assignDto = { assigneeId: 'assignee-id' };
+      const admin = { id: 'admin-id', role: UserRole.ADMIN } as User;
+      const expectedResult = { id, assignedToId: 'assignee-id' };
+
+      service.assignReport.mockResolvedValue(expectedResult);
+
+      const result = await controller.assign(id, assignDto, admin);
+
+      expect(service.assignReport).toHaveBeenCalledWith(id, 'assignee-id', admin);
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('escalate', () => {
+    it('should escalate a report', async () => {
+      const id = 'report-id';
+      const admin = { id: 'admin-id', role: UserRole.ADMIN } as User;
+      const expectedResult = { id, escalated: true, priority: 'critical' };
+
+      service.escalateReport.mockResolvedValue(expectedResult);
+
+      const result = await controller.escalate(id, admin);
+
+      expect(service.escalateReport).toHaveBeenCalledWith(id, admin);
       expect(result).toEqual(expectedResult);
     });
   });

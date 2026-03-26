@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, UseGuards, Query } from '@ne
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
+import { AssignReportDto } from './dto/assign-report.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -41,5 +42,26 @@ export class ReportsController {
     @CurrentUser() admin: User,
   ) {
     return this.reportsService.updateStatus(id, updateDto, admin);
+  }
+
+  @Patch(':id/assign')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  assign(
+    @Param('id') id: string,
+    @Body() assignDto: AssignReportDto,
+    @CurrentUser() admin: User,
+  ) {
+    return this.reportsService.assignReport(id, assignDto.assigneeId, admin);
+  }
+
+  @Patch(':id/escalate')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  escalate(
+    @Param('id') id: string,
+    @CurrentUser() admin: User,
+  ) {
+    return this.reportsService.escalateReport(id, admin);
   }
 }

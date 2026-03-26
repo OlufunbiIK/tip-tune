@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReportsService } from './reports.service';
-import { Report, ReportStatus, ReportAction, ReportEntityType } from './entities/report.entity';
+import { Report, ReportStatus, ReportAction, ReportEntityType, ReportPriority } from './entities/report.entity';
 import { User, UserStatus } from '../users/entities/user.entity';
 import { Track } from '../tracks/entities/track.entity';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 const mockReportRepository = () => ({
   create: jest.fn(),
@@ -15,6 +15,7 @@ const mockReportRepository = () => ({
 
 const mockUserRepository = () => ({
   update: jest.fn(),
+  findOne: jest.fn(),
 });
 
 const mockTrackRepository = () => ({
@@ -106,22 +107,23 @@ describe('ReportsService', () => {
 
   describe('updateStatus', () => {
     it('should update report status and handle actions', async () => {
-      const report = { 
-        id: 'report-id', 
-        entityType: ReportEntityType.USER, 
+      const report = {
+        id: 'report-id',
+        entityType: ReportEntityType.USER,
         entityId: 'user-id',
-        status: ReportStatus.PENDING 
+        status: ReportStatus.UNDER_REVIEW
       };
-      const updateDto = { 
-        status: ReportStatus.RESOLVED, 
-        action: ReportAction.USER_BANNED 
+      const updateDto = {
+        status: ReportStatus.RESOLVED,
+        action: ReportAction.USER_BANNED
       };
       const admin = { id: 'admin-id' } as User;
-      const updatedReport = { 
-        ...report, 
-        ...updateDto, 
+      const updatedReport = {
+        ...report,
+        ...updateDto,
         reviewedBy: admin,
-        reviewedAt: expect.any(Date)
+        reviewedAt: expect.any(Date),
+        resolvedAt: expect.any(Date),
       };
 
       reportRepository.findOne.mockResolvedValue(report);
@@ -133,21 +135,22 @@ describe('ReportsService', () => {
         status: ReportStatus.RESOLVED,
         action: ReportAction.USER_BANNED,
         reviewedBy: admin,
+        resolvedAt: expect.any(Date),
       }));
       expect(userRepository.update).toHaveBeenCalledWith('user-id', { status: UserStatus.BANNED });
       expect(result).toEqual(updatedReport);
     });
 
     it('should hide content if action is CONTENT_REMOVED for a track', async () => {
-      const report = { 
-        id: 'report-id', 
-        entityType: ReportEntityType.TRACK, 
+      const report = {
+        id: 'report-id',
+        entityType: ReportEntityType.TRACK,
         entityId: 'track-id',
-        status: ReportStatus.PENDING 
+        status: ReportStatus.UNDER_REVIEW
       };
-      const updateDto = { 
-        status: ReportStatus.RESOLVED, 
-        action: ReportAction.CONTENT_REMOVED 
+      const updateDto = {
+        status: ReportStatus.RESOLVED,
+        action: ReportAction.CONTENT_REMOVED
       };
       const admin = { id: 'admin-id' } as User;
 
@@ -157,6 +160,93 @@ describe('ReportsService', () => {
       await service.updateStatus('report-id', updateDto, admin);
 
       expect(trackRepository.update).toHaveBeenCalledWith('track-id', { isPublic: false });
+    });
+
+    it('should set resolvedAt when status changes to RESOLVED', async () => {
+      const report = {
+        id: 'report-id',
+        entityType: ReportEntityType.TRACK,
+        entityId: 'track-id',
+        status: ReportStatus.UNDER_REVIEW,
+      };
+      const updateDto = { status: ReportStatus.RESOLVED };
+      const admin = { id: 'admin-id' } as User;
+
+      reportRepository.findOne.mockResolvedValue(report);
+      reportRepository.save.mockImplementation((r: any) => Promise.resolve(r));
+
+      const result = await service.updateStatus('report-id', updateDto, admin);
+
+      expect(result.resolvedAt).toBeInstanceOf(Date);
+    });
+
+    it('should throw on invalid status transition', async () => {
+      const report = {
+        id: 'report-id',
+        entityType: ReportEntityType.TRACK,
+        entityId: 'track-id',
+        status: ReportStatus.RESOLVED,
+      };
+      const updateDto = { status: ReportStatus.PENDING };
+      const admin = { id: 'admin-id' } as User;
+
+      reportRepository.findOne.mockResolvedValue(report);
+
+      await expect(service.updateStatus('report-id', updateDto, admin)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('assignReport', () => {
+    it('should assign a report and set status to UNDER_REVIEW', async () => {
+      const report = {
+        id: 'report-id',
+        status: ReportStatus.PENDING,
+      };
+      const assignee = { id: 'assignee-id' } as User;
+      const admin = { id: 'admin-id' } as User;
+
+      reportRepository.findOne.mockResolvedValue(report);
+      userRepository.findOne.mockResolvedValue(assignee);
+      reportRepository.save.mockImplementation((r: any) => Promise.resolve(r));
+
+      const result = await service.assignReport('report-id', 'assignee-id', admin);
+
+      expect(result.assignedTo).toEqual(assignee);
+      expect(result.assignedToId).toBe('assignee-id');
+      expect(result.status).toBe(ReportStatus.UNDER_REVIEW);
+    });
+
+    it('should throw if assignee not found', async () => {
+      const report = { id: 'report-id', status: ReportStatus.PENDING };
+      const admin = { id: 'admin-id' } as User;
+
+      reportRepository.findOne.mockResolvedValue(report);
+      userRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.assignReport('report-id', 'bad-id', admin)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('escalateReport', () => {
+    it('should escalate a report and set priority to CRITICAL', async () => {
+      const report = {
+        id: 'report-id',
+        escalated: false,
+        priority: ReportPriority.MEDIUM,
+      };
+      const admin = { id: 'admin-id' } as User;
+
+      reportRepository.findOne.mockResolvedValue(report);
+      reportRepository.save.mockImplementation((r: any) => Promise.resolve(r));
+
+      const result = await service.escalateReport('report-id', admin);
+
+      expect(result.escalated).toBe(true);
+      expect(result.priority).toBe(ReportPriority.CRITICAL);
     });
   });
 

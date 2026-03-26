@@ -29,6 +29,13 @@ export enum ReportAction {
   USER_BANNED = 'user_banned',
 }
 
+export enum ReportPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical',
+}
+
 @Entity('reports')
 export class Report {
   @PrimaryGeneratedColumn('uuid')
@@ -89,4 +96,24 @@ export class Report {
 
   @Column({ type: 'timestamp', nullable: true, name: 'reviewed_at' })
   reviewedAt: Date;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'assigned_to_id' })
+  assignedTo: User;
+
+  @Column({ name: 'assigned_to_id', nullable: true })
+  assignedToId: string;
+
+  @Column({ type: 'boolean', default: false })
+  escalated: boolean;
+
+  @Column({ type: 'timestamp', nullable: true, name: 'resolved_at' })
+  resolvedAt: Date;
+
+  @Column({
+    type: 'enum',
+    enum: ReportPriority,
+    default: ReportPriority.MEDIUM,
+  })
+  priority: ReportPriority;
 }
