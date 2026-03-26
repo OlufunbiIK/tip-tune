@@ -19,6 +19,7 @@ import { TrackUploadedEvent } from "./events/track-uploaded.event";
 import { TrackPlayedEvent } from "./events/track-played.event";
 import { LicensingService } from "@/track-listening-right-management/licensing.service";
 import { PaginatedResult } from "@/events-live-show/events.service";
+import { ResourceNotFoundException } from "../common/exceptions/api-exception";
 
 @Injectable()
 export class TracksService {
@@ -182,7 +183,7 @@ export class TracksService {
     });
 
     if (!track) {
-      throw new NotFoundException(`Track with ID ${id} not found`);
+      throw new ResourceNotFoundException('Track', id);
     }
 
     return track;

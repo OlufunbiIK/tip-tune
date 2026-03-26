@@ -2,12 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { SanitiseInputPipe } from './common/pipes/sanitise-input.pipe';
 import { createCompressionMiddleware } from './common/middleware/response-compression.middleware';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
   const apiVersion = process.env.API_VERSION || 'v1';
 
   // Enable cookie parser
@@ -20,6 +23,10 @@ async function bootstrap() {
   });
 
   app.use(createCompressionMiddleware());
+
+  // Register global exception filter FIRST - before any other pipes/guards
+  const globalExceptionFilter = new GlobalExceptionFilter(configService);
+  app.useGlobalFilters(globalExceptionFilter);
 
   // Global validation pipe
   app.useGlobalPipes(
