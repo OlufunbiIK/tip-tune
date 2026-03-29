@@ -453,7 +453,7 @@ We are committed to providing a welcoming and inspiring community for all.
 
 Violations can be reported to maintainers. All complaints will be reviewed and investigated promptly and fairly.
 
----
+----
 
 ## 🙋 Getting Help
 

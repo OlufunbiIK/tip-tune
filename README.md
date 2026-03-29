@@ -502,7 +502,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 💡 Support the Project
+## 💡 Support the Project.
 
 If you find TipTune valuable, consider:
 
