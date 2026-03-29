@@ -13,11 +13,23 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test": "jest --config ./test/jest-unit.json",
+    "test:watch": "jest --config ./test/jest-unit.json --watch",
+    "test:cov": "jest --config ./test/jest-unit.json --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config ./test/jest-unit.json --runInBand",
+    "test:integration": "jest --config ./test/jest-integration.json",
+    "test:integration:watch": "jest --config ./test/jest-integration.json --watch",
+    "test:integration:cov": "jest --config ./test/jest-integration.json --coverage",
+    "test:e2e": "jest --config ./test/jest-e2e-updated.json",
+    "test:e2e:watch": "jest --config ./test/jest-e2e-updated.json --watch",
+    "test:e2e:cov": "jest --config ./test/jest-e2e-updated.json --coverage",
+    "test:all": "npm run test && npm run test:integration && npm run test:e2e",
+    "test:all:cov": "npm run test:cov && npm run test:integration:cov && npm run test:e2e:cov",
+    "test:modules": "jest --config ./test/jest-unit.json --testPathPattern=\"src/(analytics|artiste-payout|auth|comments|embed|events-live-show|follows|genres|platinum-fee|playlists|search|social-sharing|subscription-tiers|tips|track-listening-right-management|track-play-count|waveform)\"",
+    "test:modules:watch": "npm run test:modules -- --watch",
+    "test:modules:cov": "npm run test:modules -- --coverage",
+    "test:contract": "jest --config ./test/jest-e2e-updated.json --testPathPattern=\"api-contract.spec.ts\"",
+    "test:legacy": "jest --config ./test/jest-e2e.json",
     "migration:run": "npx typeorm-ts-node-commonjs migration:run -d data-source.ts",
     "migration:revert": "npx typeorm-ts-node-commonjs migration:revert -d data-source.ts",
     "seed:genres": "ts-node -r tsconfig-paths/register src/genres/seeds/genres.seed.ts"
@@ -99,29 +111,5 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.3.3"
-  },
-  "jest": {
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    },
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "<rootDir>/(analytics|artiste-payout|auth|comments|embed|events-live-show|follows|genres|platinum-fee|playlists|search|social-sharing|subscription-tiers|tips|track-listening-right-management|track-play-count|waveform)/.*\\.spec\\.ts$"
-    ],
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
   }
 }

@@ -1,0 +1,41 @@
+{
+  "displayName": "Integration Tests",
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/../src/$1"
+  },
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "<rootDir>/.*\\.e2e-spec\\.ts$",
+    "<rootDir>/.*\\.unit-spec\\.ts$"
+  ],
+  "testMatch": [
+    "<rootDir>/../src/**/*.integration-spec.ts"
+  ],
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "collectCoverageFrom": [
+    "../src/**/*.(t|j)s",
+    "!../src/**/*.spec.ts",
+    "!../src/**/*.e2e-spec.ts",
+    "!../src/**/*.unit-spec.ts",
+    "!../src/main.ts"
+  ],
+  "coverageDirectory": "<rootDir>/../coverage/integration",
+  "coverageReporters": [
+    "text",
+    "lcov",
+    "html"
+  ],
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": [
+    "<rootDir>/setup/integration.setup.ts"
+  ],
+  "verbose": true
+}

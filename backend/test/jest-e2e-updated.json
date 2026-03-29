@@ -1,0 +1,43 @@
+{
+  "displayName": "E2E Tests",
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/../src/$1"
+  },
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "<rootDir>/../src/**/*.spec.ts$",
+    "<rootDir>/../src/**/*.integration-spec.ts$",
+    "<rootDir>/../src/**/*.unit-spec.ts$"
+  ],
+  "testMatch": [
+    "<rootDir>/**/*.e2e-spec.ts"
+  ],
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "collectCoverageFrom": [
+    "../src/**/*.(t|j)s",
+    "!../src/**/*.spec.ts",
+    "!../src/**/*.e2e-spec.ts",
+    "!../src/**/*.integration-spec.ts",
+    "!../src/**/*.unit-spec.ts",
+    "!../src/main.ts"
+  ],
+  "coverageDirectory": "<rootDir>/../coverage/e2e",
+  "coverageReporters": [
+    "text",
+    "lcov",
+    "html"
+  ],
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": [
+    "<rootDir>/setup/e2e.setup.ts"
+  ],
+  "verbose": true
+}
