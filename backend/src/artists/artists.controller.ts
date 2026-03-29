@@ -14,6 +14,7 @@ import { ArtistsService } from "./artists.service";
 import { CreateArtistDto } from "./dto/create-artist.dto";
 import { UpdateArtistDto } from "./dto/update-artist.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from "@nestjs/swagger";
 
 @Controller("artists")
@@ -22,8 +23,8 @@ export class ArtistsController {
   constructor(private readonly artistsService: ArtistsService) {}
 
   @Post()
-  create(@Req() req, @Body() dto: CreateArtistDto) {
-    return this.artistsService.create(req.user.id, dto);
+  create(@CurrentUser("userId") userId: string, @Body() dto: CreateArtistDto) {
+    return this.artistsService.create(userId, dto);
   }
 
   @Get()
@@ -64,18 +65,18 @@ export class ArtistsController {
   }
 
   @Get("me")
-  findMyArtist(@Req() req) {
-    return this.artistsService.findByUser(req.user.id);
+  findMyArtist(@CurrentUser("userId") userId: string) {
+    return this.artistsService.findByUser(userId);
   }
 
   @Patch("me")
-  update(@Req() req, @Body() dto: UpdateArtistDto) {
-    return this.artistsService.update(req.user.id, dto);
+  update(@CurrentUser("userId") userId: string, @Body() dto: UpdateArtistDto) {
+    return this.artistsService.update(userId, dto);
   }
 
   @Delete("me")
-  remove(@Req() req) {
-    return this.artistsService.remove(req.user.id);
+  remove(@CurrentUser("userId") userId: string) {
+    return this.artistsService.remove(userId);
   }
 
   // Admin only

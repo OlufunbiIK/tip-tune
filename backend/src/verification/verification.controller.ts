@@ -23,8 +23,8 @@ import { VerificationResponseDto, ArtistVerificationStatusDto } from './dto/veri
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User, UserRole } from '../users/entities/user.entity';
+import { CurrentUser, CurrentUserData } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('verification')
 @Controller('verification')
@@ -65,7 +65,7 @@ export class VerificationController {
   @ApiResponse({ status: 400, description: 'Invalid input or file' })
   @ApiResponse({ status: 409, description: 'Pending request already exists' })
   async createVerificationRequest(
-    @CurrentUser() user: User,
+    @CurrentUser() user: CurrentUserData,
     @Body() dto: CreateVerificationRequestDto,
     @UploadedFiles() documents: Express.Multer.File[],
   ): Promise<VerificationResponseDto> {
@@ -74,7 +74,7 @@ export class VerificationController {
     }
 
     const request = await this.verificationService.createVerificationRequest(
-      user.id,
+      user.userId,
       dto,
       documents || [],
     );
@@ -88,9 +88,9 @@ export class VerificationController {
   @ApiOperation({ summary: 'Get current artist verification status' })
   @ApiResponse({ status: 200, description: 'Verification status', type: ArtistVerificationStatusDto })
   async getVerificationStatus(
-    @CurrentUser() user: User,
+    @CurrentUser() user: CurrentUserData,
   ): Promise<ArtistVerificationStatusDto> {
-    return this.verificationService.getArtistVerificationStatus(user.id);
+    return this.verificationService.getArtistVerificationStatus(user.userId);
   }
 
   @Get('requests/:id')
@@ -115,9 +115,9 @@ export class VerificationController {
   @ApiResponse({ status: 404, description: 'Request not found' })
   async deleteRequest(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: User,
+    @CurrentUser() user: CurrentUserData,
   ): Promise<void> {
-    await this.verificationService.deleteRequest(id, user.id);
+    await this.verificationService.deleteRequest(id, user.userId);
   }
 
   // Admin endpoints
@@ -149,11 +149,11 @@ export class VerificationController {
   async reviewRequest(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReviewVerificationRequestDto,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
   ): Promise<VerificationResponseDto> {
     const request = await this.verificationService.reviewRequest(
       id,
-      admin.id,
+      admin.userId,
       dto,
     );
     return this.mapToResponseDto(request);

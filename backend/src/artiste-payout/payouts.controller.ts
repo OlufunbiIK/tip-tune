@@ -29,7 +29,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 @ApiTags("payouts")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller("api/payouts")
+@Controller("payouts")
 export class PayoutsController {
   constructor(private readonly payoutsService: PayoutsService) {}
 

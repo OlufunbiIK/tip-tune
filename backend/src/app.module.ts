@@ -45,6 +45,8 @@ import { EmbedModule } from "./embed/embed.module";
 import { ReferralModule } from "./social-sharing/referral.module";
 import { PayoutsModule } from "./artiste-payout/payouts.module";
 import { validate } from "./config/env.validation";
+import { AdminModule } from "./admin/admin.module";
+import { VerificationModule } from "./verification/verification.module";
 
 @Module({
   imports: [
@@ -126,6 +128,8 @@ import { validate } from "./config/env.validation";
     EmbedModule,
     ReferralModule,
     PayoutsModule,
+    AdminModule,
+    VerificationModule,
   ],
   controllers: [],
   providers: [

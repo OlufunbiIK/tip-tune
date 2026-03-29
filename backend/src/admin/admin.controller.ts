@@ -15,8 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminRoleGuard } from './guards/admin-role.guard';
 import { RequirePermission } from './decorators/require-permission.decorator';
 import { PERMISSIONS } from './constants/permissions';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { CurrentUser, CurrentUserData } from '../auth/decorators/current-user.decorator';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { BanUserDto } from './dto/ban-user.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
@@ -52,44 +51,44 @@ export class AdminController {
   async banUser(
     @Param('userId') userId: string,
     @Body() banDto: BanUserDto,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
     @Req() req: any,
   ) {
     const ipAddress = req.ip || req.connection.remoteAddress;
-    return this.adminService.banUser(userId, banDto, admin.id, ipAddress);
+    return this.adminService.banUser(userId, banDto, admin.userId, ipAddress);
   }
 
   @Put('users/:userId/unban')
   @RequirePermission(PERMISSIONS.UNBAN_USERS)
   async unbanUser(
     @Param('userId') userId: string,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
     @Req() req: any,
   ) {
     const ipAddress = req.ip || req.connection.remoteAddress;
-    return this.adminService.unbanUser(userId, admin.id, ipAddress);
+    return this.adminService.unbanUser(userId, admin.userId, ipAddress);
   }
 
   @Put('artists/:artistId/verify')
   @RequirePermission(PERMISSIONS.VERIFY_ARTISTS)
   async verifyArtist(
     @Param('artistId') artistId: string,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
     @Req() req: any,
   ) {
     const ipAddress = req.ip || req.connection.remoteAddress;
-    return this.adminService.verifyArtist(artistId, admin.id, ipAddress);
+    return this.adminService.verifyArtist(artistId, admin.userId, ipAddress);
   }
 
   @Put('artists/:artistId/unverify')
   @RequirePermission(PERMISSIONS.UNVERIFY_ARTISTS)
   async unverifyArtist(
     @Param('artistId') artistId: string,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
     @Req() req: any,
   ) {
     const ipAddress = req.ip || req.connection.remoteAddress;
-    return this.adminService.unverifyArtist(artistId, admin.id, ipAddress);
+    return this.adminService.unverifyArtist(artistId, admin.userId, ipAddress);
   }
 
   @Delete('tracks/:trackId')
@@ -97,11 +96,11 @@ export class AdminController {
   async removeTrack(
     @Param('trackId') trackId: string,
     @Body('reason') reason: string,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
     @Req() req: any,
   ) {
     const ipAddress = req.ip || req.connection.remoteAddress;
-    return this.adminService.removeTrack(trackId, reason, admin.id, ipAddress);
+    return this.adminService.removeTrack(trackId, reason, admin.userId, ipAddress);
   }
 
   @Get('reports/pending')
@@ -115,14 +114,14 @@ export class AdminController {
   async resolveReport(
     @Param('reportId') reportId: string,
     @Body() resolveDto: ResolveReportDto,
-    @CurrentUser() admin: User,
+    @CurrentUser() admin: CurrentUserData,
     @Req() req: any,
   ) {
     const ipAddress = req.ip || req.connection.remoteAddress;
     return this.adminService.resolveReport(
       reportId,
       resolveDto,
-      admin.id,
+      admin.userId,
       ipAddress,
     );
   }

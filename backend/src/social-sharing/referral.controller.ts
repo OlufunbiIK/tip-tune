@@ -37,7 +37,7 @@ import {
 @ApiTags("Referrals")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller("api/referrals")
+@Controller("referrals")
 export class ReferralController {
   constructor(private readonly referralService: ReferralService) {}
 

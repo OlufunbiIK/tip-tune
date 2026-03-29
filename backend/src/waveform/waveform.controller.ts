@@ -3,7 +3,7 @@ import { WaveformService } from './waveform.service';
 import { TrackWaveform } from './entities/track-waveform.entity';
 import { TracksService } from '../tracks/tracks.service';
 
-@Controller('api/waveform')
+@Controller('waveform')
 export class WaveformController {
   constructor(
     private readonly waveformService: WaveformService,

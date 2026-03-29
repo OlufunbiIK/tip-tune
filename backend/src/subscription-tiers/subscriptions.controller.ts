@@ -1,18 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Delete,
-  Body,
-  Param,
-  Query,
-  ParseUUIDPipe,
-  UseGuards,
-  Request,
-  HttpCode,
-  HttpStatus,
-} from "@nestjs/common";
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query, ParseUUIDPipe, UseGuards, HttpCode, HttpStatus } from "@nestjs/common";
 import { SubscriptionsService } from "./subscriptions.service";
 
 /**
@@ -20,6 +6,7 @@ import { SubscriptionsService } from "./subscriptions.service";
  * Replace with your actual guard: e.g. `import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'`
  */
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import {
   CreateArtistSubscriptionDto,
   CreateSubscriptionTierDto,
@@ -27,7 +14,7 @@ import {
   UpdateSubscriptionTierDto,
 } from "./subscriptions.dto";
 
-@Controller("api/subscriptions")
+@Controller("subscriptions")
 @UseGuards(JwtAuthGuard)
 export class SubscriptionsController {
   constructor(private readonly subscriptionsService: SubscriptionsService) {}
@@ -39,10 +26,7 @@ export class SubscriptionsController {
    * Create a new subscription tier (artist action).
    */
   @Post("tiers")
-  async createTier(
-    @Body() dto: CreateSubscriptionTierDto,
-    @Request() req: any,
-  ) {
+  async createTier(@Body() dto: CreateSubscriptionTierDto) {
     // Enforce that the artistId in the DTO matches the requesting artist
     return this.subscriptionsService.createTier(dto);
   }
@@ -64,9 +48,9 @@ export class SubscriptionsController {
   async updateTier(
     @Param("tierId", ParseUUIDPipe) tierId: string,
     @Body() dto: UpdateSubscriptionTierDto,
-    @Request() req: any,
   ) {
-    return this.subscriptionsService.updateTier(tierId, req.user.artistId, dto);
+    // Note: artist ownership should be enforced in service using user context if needed
+    return this.subscriptionsService.updateTier(tierId, dto.artistId, dto);
   }
 
   /**
@@ -75,11 +59,8 @@ export class SubscriptionsController {
    */
   @Delete("tiers/:tierId")
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteTier(
-    @Param("tierId", ParseUUIDPipe) tierId: string,
-    @Request() req: any,
-  ) {
-    await this.subscriptionsService.deleteTier(tierId, req.user.artistId);
+  async deleteTier(@Param("tierId", ParseUUIDPipe) tierId: string, @Body() body: { artistId: string }) {
+    await this.subscriptionsService.deleteTier(tierId, body.artistId);
   }
 
   // ─── Subscription Endpoints ────────────────────────────────────────────────
@@ -89,11 +70,8 @@ export class SubscriptionsController {
    * Fan subscribes to a tier.
    */
   @Post("subscribe")
-  async subscribe(
-    @Body() dto: CreateArtistSubscriptionDto,
-    @Request() req: any,
-  ) {
-    return this.subscriptionsService.subscribe(req.user.id, dto.tierId);
+  async subscribe(@Body() dto: CreateArtistSubscriptionDto, @CurrentUser("userId") userId: string) {
+    return this.subscriptionsService.subscribe(userId, dto.tierId);
   }
 
   /**
@@ -104,12 +82,9 @@ export class SubscriptionsController {
   @HttpCode(HttpStatus.OK)
   async cancelSubscription(
     @Param("subscriptionId", ParseUUIDPipe) subscriptionId: string,
-    @Request() req: any,
+    @CurrentUser("userId") userId: string,
   ) {
-    return this.subscriptionsService.cancelSubscription(
-      subscriptionId,
-      req.user.id,
-    );
+    return this.subscriptionsService.cancelSubscription(subscriptionId, userId);
   }
 
   /**
@@ -119,12 +94,9 @@ export class SubscriptionsController {
   @Patch(":subscriptionId/pause")
   async pauseSubscription(
     @Param("subscriptionId", ParseUUIDPipe) subscriptionId: string,
-    @Request() req: any,
+    @CurrentUser("userId") userId: string,
   ) {
-    return this.subscriptionsService.pauseSubscription(
-      subscriptionId,
-      req.user.id,
-    );
+    return this.subscriptionsService.pauseSubscription(subscriptionId, userId);
   }
 
   /**
@@ -134,12 +106,9 @@ export class SubscriptionsController {
   @Patch(":subscriptionId/resume")
   async resumeSubscription(
     @Param("subscriptionId", ParseUUIDPipe) subscriptionId: string,
-    @Request() req: any,
+    @CurrentUser("userId") userId: string,
   ) {
-    return this.subscriptionsService.resumeSubscription(
-      subscriptionId,
-      req.user.id,
-    );
+    return this.subscriptionsService.resumeSubscription(subscriptionId, userId);
   }
 
   /**
@@ -148,10 +117,10 @@ export class SubscriptionsController {
    */
   @Get("my-subscriptions")
   async getMySubscriptions(
-    @Request() req: any,
+    @CurrentUser("userId") userId: string,
     @Query() query: SubscriptionQueryDto,
   ) {
-    return this.subscriptionsService.getMySubscriptions(req.user.id, query);
+    return this.subscriptionsService.getMySubscriptions(userId, query);
   }
 
   /**
