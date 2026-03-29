@@ -22,7 +22,10 @@ import {
 import { ReferralService } from "./referral.service";
 
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import {
+  CurrentUser,
+  CurrentUserData,
+} from "../auth/decorators/current-user.decorator";
 import {
   ApplyReferralResponseDto,
   GenerateReferralCodeDto,
@@ -44,10 +47,10 @@ export class ReferralController {
   })
   @ApiResponse({ status: 201, type: ReferralCodeResponseDto })
   async generateCode(
-    @CurrentUser("id") userId: string,
+    @CurrentUser() user: CurrentUserData,
     @Body() dto: GenerateReferralCodeDto,
   ): Promise<ReferralCodeResponseDto> {
-    return this.referralService.generateCode(userId, dto);
+    return this.referralService.generateCode(user.userId, dto);
   }
 
   @Get("my-code")
@@ -56,9 +59,9 @@ export class ReferralController {
   })
   @ApiResponse({ status: 200, type: ReferralCodeResponseDto })
   async getMyCode(
-    @CurrentUser("id") userId: string,
+    @CurrentUser() user: CurrentUserData,
   ): Promise<ReferralCodeResponseDto> {
-    return this.referralService.getMyCode(userId);
+    return this.referralService.getMyCode(user.userId);
   }
 
   @Post("apply/:code")
@@ -74,9 +77,9 @@ export class ReferralController {
   @ApiResponse({ status: 409, description: "User already referred" })
   async applyCode(
     @Param("code") code: string,
-    @CurrentUser("id") userId: string,
+    @CurrentUser() user: CurrentUserData,
   ): Promise<ApplyReferralResponseDto> {
-    return this.referralService.applyCode(code.toUpperCase(), userId);
+    return this.referralService.applyCode(code.toUpperCase(), user.userId);
   }
 
   @Get("stats/:userId")

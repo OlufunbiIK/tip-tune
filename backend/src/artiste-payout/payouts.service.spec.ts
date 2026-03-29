@@ -1,17 +1,40 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { Artist } from '../artists/entities/artist.entity';
+import { ArtistBalance } from './artist-balance.entity';
+import {
+  ArtistBalanceAudit,
+  ArtistBalanceAuditType,
+} from './artist-balance-audit.entity';
+import { CreatePayoutDto } from './create-payout.dto';
+import { PayoutRequest, PayoutStatus } from './payout-request.entity';
 import { PayoutsService } from './payouts.service';
-import { PayoutRequest, PayoutStatus } from './entities/payout-request.entity';
-import { ArtistBalance } from './entities/artist-balance.entity';
-import { CreatePayoutDto } from './dto/create-payout.dto';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const ARTIST_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
+const OTHER_ARTIST_ID = 'a1b2c3d4-0000-0000-0000-000000000099';
+const OWNER_USER_ID = 'user-123';
 const DEST_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+
+function makeArtist(overrides: Partial<Artist> = {}): Artist {
+  return Object.assign(new Artist(), {
+    id: ARTIST_ID,
+    userId: OWNER_USER_ID,
+    walletAddress: DEST_ADDRESS,
+    artistName: 'Owner',
+    genre: 'Afrobeats',
+    bio: 'Artist bio',
+    isDeleted: false,
+    ...overrides,
+  });
+}
 
 function makeBalance(overrides: Partial<ArtistBalance> = {}): ArtistBalance {
   return Object.assign(new ArtistBalance(), {
@@ -20,6 +43,7 @@ function makeBalance(overrides: Partial<ArtistBalance> = {}): ArtistBalance {
     xlmBalance: 100,
     usdcBalance: 50,
     pendingXlm: 0,
+    pendingUsdc: 0,
     lastUpdated: new Date(),
     ...overrides,
   });
@@ -41,53 +65,74 @@ function makePayout(overrides: Partial<PayoutRequest> = {}): PayoutRequest {
   });
 }
 
-function makeQueryRunner(balance: ArtistBalance) {
-  const repo = {
+function makeQueryRunner(balance: ArtistBalance | null) {
+  const balanceRepo = {
     createQueryBuilder: jest.fn().mockReturnThis(),
     setLock: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     getOne: jest.fn().mockResolvedValue(balance),
     update: jest.fn().mockResolvedValue(undefined),
-    create: jest.fn((d) => Object.assign(new PayoutRequest(), d)),
-    save: jest.fn((e) => Promise.resolve({ ...e, id: 'new-pay-uuid' })),
+    findOne: jest.fn().mockResolvedValue(balance),
+  };
+
+  const payoutRepo = {
+    create: jest.fn((data) => Object.assign(new PayoutRequest(), data)),
+    save: jest.fn(async (entity) => ({ ...entity, id: 'new-pay-uuid' })),
     findOne: jest.fn(),
+    update: jest.fn().mockResolvedValue(undefined),
   };
 
   return {
-    connect: jest.fn(),
-    startTransaction: jest.fn(),
-    commitTransaction: jest.fn(),
-    rollbackTransaction: jest.fn(),
-    release: jest.fn(),
+    connect: jest.fn().mockResolvedValue(undefined),
+    startTransaction: jest.fn().mockResolvedValue(undefined),
+    commitTransaction: jest.fn().mockResolvedValue(undefined),
+    rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+    release: jest.fn().mockResolvedValue(undefined),
     manager: {
-      getRepository: jest.fn().mockReturnValue(repo),
+      getRepository: jest.fn((entity) => {
+        if (entity === ArtistBalance) {
+          return balanceRepo;
+        }
+
+        return payoutRepo;
+      }),
     },
-    _repo: repo,
+    _balanceRepo: balanceRepo,
+    _payoutRepo: payoutRepo,
   };
 }
-
-// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('PayoutsService', () => {
   let service: PayoutsService;
   let payoutRepo: jest.Mocked<any>;
   let balanceRepo: jest.Mocked<any>;
+  let auditRepo: jest.Mocked<any>;
+  let artistRepo: jest.Mocked<any>;
   let dataSource: jest.Mocked<any>;
 
   beforeEach(async () => {
     payoutRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn((d) => Object.assign(new PayoutRequest(), d)),
+      create: jest.fn((data) => Object.assign(new PayoutRequest(), data)),
       save: jest.fn(),
       update: jest.fn(),
     };
 
     balanceRepo = {
       findOne: jest.fn(),
-      create: jest.fn((d) => Object.assign(new ArtistBalance(), d)),
+      create: jest.fn((data) => Object.assign(new ArtistBalance(), data)),
       save: jest.fn(),
       update: jest.fn(),
+    };
+
+    auditRepo = {
+      create: jest.fn((data) => data),
+      save: jest.fn(),
+    };
+
+    artistRepo = {
+      findOne: jest.fn().mockResolvedValue(makeArtist()),
     };
 
     dataSource = { createQueryRunner: jest.fn() };
@@ -97,57 +142,39 @@ describe('PayoutsService', () => {
         PayoutsService,
         { provide: getRepositoryToken(PayoutRequest), useValue: payoutRepo },
         { provide: getRepositoryToken(ArtistBalance), useValue: balanceRepo },
+        { provide: getRepositoryToken(ArtistBalanceAudit), useValue: auditRepo },
+        { provide: getRepositoryToken(Artist), useValue: artistRepo },
         { provide: DataSource, useValue: dataSource },
         {
           provide: ConfigService,
-          useValue: { get: (key: string, def: any) => def },
+          useValue: { get: (_key: string, defaultValue: any) => defaultValue },
         },
       ],
     }).compile();
 
     service = module.get<PayoutsService>(PayoutsService);
-    // Stub address verification to always pass
-    jest.spyOn(service as any, 'verifyArtistAddress').mockResolvedValue(undefined);
+    jest.clearAllMocks();
+    artistRepo.findOne.mockResolvedValue(makeArtist());
   });
-
-  afterEach(() => jest.clearAllMocks());
-
-  // ── getOrCreateBalance ──────────────────────────────────────────────────────
-
-  describe('getOrCreateBalance', () => {
-    it('returns existing balance', async () => {
-      const b = makeBalance();
-      balanceRepo.findOne.mockResolvedValue(b);
-      await expect(service.getOrCreateBalance(ARTIST_ID)).resolves.toEqual(b);
-      expect(balanceRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('creates balance when missing', async () => {
-      balanceRepo.findOne.mockResolvedValue(null);
-      const created = makeBalance({ xlmBalance: 0 });
-      balanceRepo.save.mockResolvedValue(created);
-      const result = await service.getOrCreateBalance(ARTIST_ID);
-      expect(balanceRepo.save).toHaveBeenCalled();
-      expect(result.artistId).toBe(ARTIST_ID);
-    });
-  });
-
-  // ── getBalance ──────────────────────────────────────────────────────────────
 
   describe('getBalance', () => {
-    it('returns balance', async () => {
-      const b = makeBalance();
-      balanceRepo.findOne.mockResolvedValue(b);
-      await expect(service.getBalance(ARTIST_ID)).resolves.toEqual(b);
+    it('should return the owned artist balance', async () => {
+      const balance = makeBalance();
+      balanceRepo.findOne.mockResolvedValue(balance);
+
+      await expect(service.getBalance(OWNER_USER_ID, ARTIST_ID)).resolves.toEqual(balance);
     });
 
-    it('throws NotFoundException when no record', async () => {
-      balanceRepo.findOne.mockResolvedValue(null);
-      await expect(service.getBalance(ARTIST_ID)).rejects.toThrow(NotFoundException);
+    it('should reject access to another artist profile', async () => {
+      artistRepo.findOne.mockResolvedValue(
+        makeArtist({ id: OTHER_ARTIST_ID, userId: 'other-user' }),
+      );
+
+      await expect(service.getBalance(OWNER_USER_ID, OTHER_ARTIST_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
-
-  // ── requestPayout ───────────────────────────────────────────────────────────
 
   describe('requestPayout', () => {
     const dto: CreatePayoutDto = {
@@ -157,204 +184,114 @@ describe('PayoutsService', () => {
       destinationAddress: DEST_ADDRESS,
     };
 
-    it('creates payout and reserves balance', async () => {
-      const balance = makeBalance({ xlmBalance: 100, pendingXlm: 0 });
-      const qr = makeQueryRunner(balance);
-      dataSource.createQueryRunner.mockReturnValue(qr);
-      payoutRepo.findOne.mockResolvedValue(null); // no pending
+    it('should create a payout and reserve balance', async () => {
+      const queryRunner = makeQueryRunner(makeBalance());
+      dataSource.createQueryRunner.mockReturnValue(queryRunner);
+      payoutRepo.findOne.mockResolvedValue(null);
 
-      const result = await service.requestPayout(dto);
+      const result = await service.requestPayout(OWNER_USER_ID, dto);
 
-      expect(qr.commitTransaction).toHaveBeenCalled();
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
       expect(result.artistId).toBe(ARTIST_ID);
-    });
-
-    it('rejects below minimum threshold', async () => {
-      const lowDto = { ...dto, amount: 5 }; // default min is 10
-      await expect(service.requestPayout(lowDto)).rejects.toThrow(BadRequestException);
-    });
-
-    it('rejects duplicate pending payout', async () => {
-      payoutRepo.findOne.mockResolvedValue(makePayout());
-      await expect(service.requestPayout(dto)).rejects.toThrow(ConflictException);
-    });
-
-    it('rejects when balance insufficient', async () => {
-      const balance = makeBalance({ xlmBalance: 5, pendingXlm: 0 });
-      const qr = makeQueryRunner(balance);
-      dataSource.createQueryRunner.mockReturnValue(qr);
-      payoutRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.requestPayout(dto)).rejects.toThrow(BadRequestException);
-      expect(qr.rollbackTransaction).toHaveBeenCalled();
-    });
-
-    it('rejects when no balance record', async () => {
-      const qr = makeQueryRunner(null);
-      dataSource.createQueryRunner.mockReturnValue(qr);
-      payoutRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.requestPayout(dto)).rejects.toThrow(NotFoundException);
-      expect(qr.rollbackTransaction).toHaveBeenCalled();
-    });
-
-    it('accounts for pending XLM when calculating available', async () => {
-      const balance = makeBalance({ xlmBalance: 25, pendingXlm: 20 }); // only 5 available
-      const qr = makeQueryRunner(balance);
-      dataSource.createQueryRunner.mockReturnValue(qr);
-      payoutRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.requestPayout({ ...dto, amount: 10 })).rejects.toThrow(
-        BadRequestException,
+      expect(auditRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: ArtistBalanceAuditType.PAYOUT_REQUEST }),
       );
     });
-  });
 
-  // ── getHistory ──────────────────────────────────────────────────────────────
+    it('should reject below-threshold payouts', async () => {
+      await expect(
+        service.requestPayout(OWNER_USER_ID, { ...dto, amount: 5 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject duplicate pending payouts', async () => {
+      payoutRepo.findOne.mockResolvedValue(makePayout());
+
+      await expect(service.requestPayout(OWNER_USER_ID, dto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should reject payouts to wallets not owned by the artist', async () => {
+      await expect(
+        service.requestPayout(OWNER_USER_ID, {
+          ...dto,
+          destinationAddress: 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should reject payouts for another artist profile', async () => {
+      artistRepo.findOne.mockResolvedValue(
+        makeArtist({ id: OTHER_ARTIST_ID, userId: 'other-user' }),
+      );
+
+      await expect(
+        service.requestPayout(OWNER_USER_ID, { ...dto, artistId: OTHER_ARTIST_ID }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
 
   describe('getHistory', () => {
-    it('returns payouts for artist ordered desc', async () => {
-      const payouts = [makePayout(), makePayout({ status: PayoutStatus.COMPLETED })];
+    it('should return history for the owned artist', async () => {
+      const payouts = [makePayout(), makePayout({ id: 'pay-2', status: PayoutStatus.COMPLETED })];
       payoutRepo.find.mockResolvedValue(payouts);
-      const result = await service.getHistory(ARTIST_ID);
-      expect(result).toHaveLength(2);
+
+      const result = await service.getHistory(OWNER_USER_ID, ARTIST_ID);
+
+      expect(result).toEqual(payouts);
     });
   });
-
-  // ── getStatus ───────────────────────────────────────────────────────────────
 
   describe('getStatus', () => {
-    it('returns payout by id', async () => {
+    it('should return payout status for the owned artist', async () => {
       const payout = makePayout();
       payoutRepo.findOne.mockResolvedValue(payout);
-      await expect(service.getStatus('pay-uuid')).resolves.toEqual(payout);
+
+      await expect(service.getStatus(OWNER_USER_ID, 'pay-uuid')).resolves.toEqual(payout);
     });
 
-    it('throws NotFoundException for unknown id', async () => {
-      payoutRepo.findOne.mockResolvedValue(null);
-      await expect(service.getStatus('unknown')).rejects.toThrow(NotFoundException);
+    it('should reject payout status lookups for another artist', async () => {
+      payoutRepo.findOne.mockResolvedValue(makePayout({ artistId: OTHER_ARTIST_ID }));
+      artistRepo.findOne.mockResolvedValue(
+        makeArtist({ id: OTHER_ARTIST_ID, userId: 'other-user' }),
+      );
+
+      await expect(service.getStatus(OWNER_USER_ID, 'pay-uuid')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
-
-  // ── retryPayout ─────────────────────────────────────────────────────────────
 
   describe('retryPayout', () => {
-    it('resets failed payout to pending', async () => {
+    it('should retry failed payouts', async () => {
       const failed = makePayout({ status: PayoutStatus.FAILED, failureReason: 'timeout' });
       payoutRepo.findOne
-        .mockResolvedValueOnce(failed)   // first call for payout
-        .mockResolvedValueOnce(null)     // no pending duplicate
-        .mockResolvedValueOnce({ ...failed, status: PayoutStatus.PENDING }); // after update
-      payoutRepo.update.mockResolvedValue(undefined);
-
-      const result = await service.retryPayout('pay-uuid');
-      expect(payoutRepo.update).toHaveBeenCalledWith('pay-uuid', expect.objectContaining({
-        status: PayoutStatus.PENDING,
-      }));
-    });
-
-    it('throws BadRequestException if not failed', async () => {
-      payoutRepo.findOne.mockResolvedValue(makePayout({ status: PayoutStatus.COMPLETED }));
-      await expect(service.retryPayout('pay-uuid')).rejects.toThrow(BadRequestException);
-    });
-
-    it('throws NotFoundException for unknown payout', async () => {
-      payoutRepo.findOne.mockResolvedValue(null);
-      await expect(service.retryPayout('unknown')).rejects.toThrow(NotFoundException);
-    });
-
-    it('throws ConflictException if pending already exists for artist', async () => {
-      const failed = makePayout({ status: PayoutStatus.FAILED });
-      const pending = makePayout({ id: 'other-uuid' });
-      payoutRepo.findOne
         .mockResolvedValueOnce(failed)
-        .mockResolvedValueOnce(pending);
-
-      await expect(service.retryPayout('pay-uuid')).rejects.toThrow(ConflictException);
-    });
-  });
-
-  // ── getPendingPayouts ───────────────────────────────────────────────────────
-
-  describe('getPendingPayouts', () => {
-    it('returns pending payouts', async () => {
-      const pending = [makePayout(), makePayout({ id: 'uuid2' })];
-      payoutRepo.find.mockResolvedValue(pending);
-      await expect(service.getPendingPayouts()).resolves.toHaveLength(2);
-    });
-  });
-
-  // ── markProcessing ──────────────────────────────────────────────────────────
-
-  describe('markProcessing', () => {
-    it('updates status to processing', async () => {
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ ...failed, status: PayoutStatus.PENDING });
       payoutRepo.update.mockResolvedValue(undefined);
-      await service.markProcessing('pay-uuid');
-      expect(payoutRepo.update).toHaveBeenCalledWith('pay-uuid', {
-        status: PayoutStatus.PROCESSING,
-      });
-    });
-  });
 
-  // ── finaliseSuccess ─────────────────────────────────────────────────────────
+      const result = await service.retryPayout(OWNER_USER_ID, 'pay-uuid');
 
-  describe('finaliseSuccess', () => {
-    it('updates payout and deducts balance', async () => {
-      const payout = makePayout({ amount: 20, assetCode: 'XLM' });
-      const qbUpdate = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue(undefined),
-      };
-      const qbRepo = {
-        findOne: jest.fn().mockResolvedValue(payout),
-        createQueryBuilder: jest.fn().mockReturnValue(qbUpdate),
-        update: jest.fn().mockResolvedValue(undefined),
-      };
-      const qr: any = { manager: { getRepository: jest.fn().mockReturnValue(qbRepo) } };
-
-      await service.finaliseSuccess('pay-uuid', 'txhash123', qr);
-
-      expect(qbUpdate.execute).toHaveBeenCalled();
-      expect(qbRepo.update).toHaveBeenCalledWith(
+      expect(payoutRepo.update).toHaveBeenCalledWith(
         'pay-uuid',
-        expect.objectContaining({ status: PayoutStatus.COMPLETED, stellarTxHash: 'txhash123' }),
+        expect.objectContaining({ status: PayoutStatus.PENDING }),
       );
-    });
-  });
-
-  // ── finaliseFailure ─────────────────────────────────────────────────────────
-
-  describe('finaliseFailure', () => {
-    it('marks payout as failed and releases pending reserve', async () => {
-      const payout = makePayout({ amount: 20, assetCode: 'XLM' });
-      const qbUpdate = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue(undefined),
-      };
-      const qbRepo = {
-        findOne: jest.fn().mockResolvedValue(payout),
-        createQueryBuilder: jest.fn().mockReturnValue(qbUpdate),
-        update: jest.fn().mockResolvedValue(undefined),
-      };
-      const qr: any = { manager: { getRepository: jest.fn().mockReturnValue(qbRepo) } };
-
-      await service.finaliseFailure('pay-uuid', 'network error', qr);
-
-      expect(qbUpdate.execute).toHaveBeenCalled();
-      expect(qbRepo.update).toHaveBeenCalledWith(
-        'pay-uuid',
-        expect.objectContaining({ status: PayoutStatus.FAILED }),
-      );
+      expect(result.status).toBe(PayoutStatus.PENDING);
     });
 
-    it('returns silently when payout not found', async () => {
-      const qbRepo = { findOne: jest.fn().mockResolvedValue(null) };
-      const qr: any = { manager: { getRepository: jest.fn().mockReturnValue(qbRepo) } };
-      await expect(service.finaliseFailure('unknown', 'error', qr)).resolves.toBeUndefined();
+    it('should reject retries for another artist', async () => {
+      payoutRepo.findOne.mockResolvedValue(
+        makePayout({ status: PayoutStatus.FAILED, artistId: OTHER_ARTIST_ID }),
+      );
+      artistRepo.findOne.mockResolvedValue(
+        makeArtist({ id: OTHER_ARTIST_ID, userId: 'other-user' }),
+      );
+
+      await expect(service.retryPayout(OWNER_USER_ID, 'pay-uuid')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

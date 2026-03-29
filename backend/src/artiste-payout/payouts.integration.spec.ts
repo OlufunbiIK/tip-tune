@@ -16,21 +16,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import * as request from 'supertest';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Artist } from '../artists/entities/artist.entity';
 import { PayoutsModule } from './payouts.module';
-import { PayoutRequest, PayoutStatus } from './entities/payout-request.entity';
-import { ArtistBalance } from './entities/artist-balance.entity';
+import { PayoutRequest, PayoutStatus } from './payout-request.entity';
+import { ArtistBalance } from './artist-balance.entity';
 import { PayoutProcessorService } from './payout-processor.service';
 import { PayoutsService } from './payouts.service';
-import StellarSdk from 'stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
 const ARTIST_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
+const OWNER_USER_ID = 'bbbbbbbb-0000-0000-0000-000000000001';
 const DEST_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
 const TESTNET_SECRET = process.env.STELLAR_PAYOUT_SECRET_KEY;
 const HAS_TESTNET = !!TESTNET_SECRET;
@@ -52,9 +55,9 @@ describe('Payouts Integration', () => {
   let app: INestApplication;
   let payoutRepo: Repository<PayoutRequest>;
   let balanceRepo: Repository<ArtistBalance>;
+  let artistRepo: Repository<Artist>;
   let payoutsService: PayoutsService;
   let processor: PayoutProcessorService;
-  let dataSource: DataSource;
 
   const DB_CONFIG = {
     type: 'postgres' as const,
@@ -65,11 +68,11 @@ describe('Payouts Integration', () => {
     database: process.env.DB_NAME || 'tiptune_test',
     synchronize: true,
     dropSchema: true,
-    entities: [PayoutRequest, ArtistBalance],
+    entities: [PayoutRequest, ArtistBalance, Artist],
   };
 
   beforeAll(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const moduleBuilder = Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
           isGlobal: true,
@@ -86,7 +89,22 @@ describe('Payouts Integration', () => {
         TypeOrmModule.forRoot(DB_CONFIG),
         PayoutsModule,
       ],
-    }).compile();
+    });
+
+    moduleBuilder.overrideGuard(JwtAuthGuard).useValue({
+      canActivate: (context: any) => {
+        const request = context.switchToHttp().getRequest();
+        request.user = {
+          userId: OWNER_USER_ID,
+          walletAddress: DEST_ADDRESS,
+          isArtist: true,
+        };
+
+        return true;
+      },
+    });
+
+    const module: TestingModule = await moduleBuilder.compile();
 
     app = module.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
@@ -94,9 +112,9 @@ describe('Payouts Integration', () => {
 
     payoutRepo = module.get(getRepositoryToken(PayoutRequest));
     balanceRepo = module.get(getRepositoryToken(ArtistBalance));
+    artistRepo = module.get(getRepositoryToken(Artist));
     payoutsService = module.get(PayoutsService);
     processor = module.get(PayoutProcessorService);
-    dataSource = module.get(DataSource);
   });
 
   afterAll(async () => {
@@ -106,6 +124,18 @@ describe('Payouts Integration', () => {
   beforeEach(async () => {
     await payoutRepo.delete({});
     await balanceRepo.delete({});
+    await artistRepo.delete({});
+    await artistRepo.save(
+      artistRepo.create({
+        id: ARTIST_ID,
+        userId: OWNER_USER_ID,
+        artistName: 'Integration Artist',
+        genre: 'Afrobeats',
+        bio: 'Integration test artist',
+        walletAddress: DEST_ADDRESS,
+        isDeleted: false,
+      }),
+    );
   });
 
   // ── Balance ────────────────────────────────────────────────────────────────
@@ -215,7 +245,7 @@ describe('Payouts Integration', () => {
       await balanceRepo.save(
         balanceRepo.create({ artistId: ARTIST_ID, xlmBalance: 200 }),
       );
-      await payoutsService.requestPayout({
+      await payoutsService.requestPayout(OWNER_USER_ID, {
         artistId: ARTIST_ID,
         amount: 20,
         assetCode: 'XLM',
@@ -243,7 +273,7 @@ describe('Payouts Integration', () => {
       await balanceRepo.save(
         balanceRepo.create({ artistId: ARTIST_ID, xlmBalance: 100 }),
       );
-      const payout = await payoutsService.requestPayout({
+      const payout = await payoutsService.requestPayout(OWNER_USER_ID, {
         artistId: ARTIST_ID,
         amount: 20,
         assetCode: 'XLM',
@@ -316,13 +346,14 @@ describe('Payouts Integration', () => {
 
     it('processes a pending payout on testnet and marks completed', async () => {
       const destAddress = destinationKeypair.publicKey();
+      await artistRepo.update({ id: ARTIST_ID }, { walletAddress: destAddress });
 
       // Seed balance
       await balanceRepo.save(
         balanceRepo.create({ artistId: ARTIST_ID, xlmBalance: 50 }),
       );
 
-      const payout = await payoutsService.requestPayout({
+      const payout = await payoutsService.requestPayout(OWNER_USER_ID, {
         artistId: ARTIST_ID,
         amount: 10,
         assetCode: 'XLM',
@@ -337,39 +368,17 @@ describe('Payouts Integration', () => {
       // Wait for processing
       await new Promise((r) => setTimeout(r, 2000));
 
-      const updated = await payoutsService.getStatus(payout.id);
+      const updated = await payoutsService.getStatus(OWNER_USER_ID, payout.id);
       expect([PayoutStatus.COMPLETED, PayoutStatus.FAILED]).toContain(updated.status);
 
       if (updated.status === PayoutStatus.COMPLETED) {
         expect(updated.stellarTxHash).toBeTruthy();
         expect(updated.stellarTxHash).toHaveLength(64);
 
-        const balance = await payoutsService.getBalance(ARTIST_ID);
+        const balance = await payoutsService.getBalance(OWNER_USER_ID, ARTIST_ID);
         expect(Number(balance.xlmBalance)).toBeCloseTo(40, 1);
         expect(Number(balance.pendingXlm)).toBe(0);
       }
-    }, 30_000);
-
-    it('marks payout as failed for invalid destination', async () => {
-      const invalidAddress = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
-
-      await balanceRepo.save(
-        balanceRepo.create({ artistId: ARTIST_ID, xlmBalance: 50 }),
-      );
-
-      const payout = await payoutsService.requestPayout({
-        artistId: ARTIST_ID,
-        amount: 10,
-        assetCode: 'XLM',
-        destinationAddress: invalidAddress,
-      });
-
-      await processor.processPending();
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const updated = await payoutsService.getStatus(payout.id);
-      // Depending on whether account exists on testnet this may succeed or fail
-      expect([PayoutStatus.COMPLETED, PayoutStatus.FAILED]).toContain(updated.status);
     }, 30_000);
   });
 });

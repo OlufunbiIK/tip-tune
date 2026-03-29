@@ -6,9 +6,24 @@ export interface CurrentUserData {
   isArtist: boolean;
 }
 
+type CurrentUserField = keyof CurrentUserData | 'id';
+
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): CurrentUserData => {
+  (
+    data: CurrentUserField | undefined,
+    ctx: ExecutionContext,
+  ): CurrentUserData | CurrentUserData[keyof CurrentUserData] | undefined => {
     const request = ctx.switchToHttp().getRequest();
-    return request.user;
+    const user = request.user as CurrentUserData | undefined;
+
+    if (!data) {
+      return user;
+    }
+
+    if (data === 'id') {
+      return user?.userId;
+    }
+
+    return user?.[data];
   },
 );

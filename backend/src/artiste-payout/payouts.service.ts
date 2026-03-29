@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   Logger,
+  ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource, QueryRunner } from "typeorm";
@@ -12,6 +13,7 @@ import { ArtistBalance } from "./artist-balance.entity";
 import { ArtistBalanceAudit, ArtistBalanceAuditType } from "./artist-balance-audit.entity";
 import { PayoutRequest, PayoutStatus } from "./payout-request.entity";
 import { CreatePayoutDto } from "./create-payout.dto";
+import { Artist } from "../artists/entities/artist.entity";
 
 @Injectable()
 export class PayoutsService {
@@ -26,6 +28,8 @@ export class PayoutsService {
     private readonly balanceRepo: Repository<ArtistBalance>,
     @InjectRepository(ArtistBalanceAudit)
     private readonly auditRepo: Repository<ArtistBalanceAudit>,
+    @InjectRepository(Artist)
+    private readonly artistRepo: Repository<Artist>,
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
   ) {
@@ -46,7 +50,12 @@ export class PayoutsService {
     return balance;
   }
 
-  async getBalance(artistId: string): Promise<ArtistBalance> {
+  async getBalance(
+    requestingUserId: string,
+    artistId: string,
+  ): Promise<ArtistBalance> {
+    await this.assertArtistOwnership(requestingUserId, artistId);
+
     const balance = await this.balanceRepo.findOne({ where: { artistId } });
     if (!balance) {
       throw new NotFoundException(`Balance not found for artist ${artistId}`);
@@ -108,8 +117,12 @@ export class PayoutsService {
   // Payout request
   // ---------------------------------------------------------------------------
 
-  async requestPayout(dto: CreatePayoutDto): Promise<PayoutRequest> {
+  async requestPayout(
+    requestingUserId: string,
+    dto: CreatePayoutDto,
+  ): Promise<PayoutRequest> {
     const { artistId, amount, assetCode, destinationAddress } = dto;
+    const artist = await this.assertArtistOwnership(requestingUserId, artistId);
 
     // 1. Minimum threshold check
     const threshold =
@@ -120,8 +133,8 @@ export class PayoutsService {
       );
     }
 
-    // 2. Verify artist owns this Stellar address (check in Artist record)
-    await this.verifyArtistAddress(artistId, destinationAddress);
+    // 2. Verify artist owns this Stellar address via the artist profile.
+    await this.verifyArtistAddress(artist, destinationAddress);
 
     // 3. Check for duplicate pending payout
     const existing = await this.payoutRepo.findOne({
@@ -188,6 +201,9 @@ export class PayoutsService {
 
       const saved = await qr.manager.getRepository(PayoutRequest).save(payout);
 
+      // Settlement happens asynchronously through PayoutProcessorService.
+      // This request only reserves balance and creates a pending payout.
+
       const afterBalance = await qr.manager
         .getRepository(ArtistBalance)
         .findOne({ where: { artistId } });
@@ -234,16 +250,27 @@ export class PayoutsService {
   // Queries
   // ---------------------------------------------------------------------------
 
-  async getHistory(artistId: string): Promise<PayoutRequest[]> {
+  async getHistory(
+    requestingUserId: string,
+    artistId: string,
+  ): Promise<PayoutRequest[]> {
+    await this.assertArtistOwnership(requestingUserId, artistId);
+
     return this.payoutRepo.find({
       where: { artistId },
       order: { requestedAt: "DESC" },
     });
   }
 
-  async getStatus(payoutId: string): Promise<PayoutRequest> {
+  async getStatus(
+    requestingUserId: string,
+    payoutId: string,
+  ): Promise<PayoutRequest> {
     const payout = await this.payoutRepo.findOne({ where: { id: payoutId } });
     if (!payout) throw new NotFoundException(`Payout ${payoutId} not found`);
+
+    await this.assertArtistOwnership(requestingUserId, payout.artistId);
+
     return payout;
   }
 
@@ -251,9 +278,14 @@ export class PayoutsService {
   // Retry
   // ---------------------------------------------------------------------------
 
-  async retryPayout(payoutId: string): Promise<PayoutRequest> {
+  async retryPayout(
+    requestingUserId: string,
+    payoutId: string,
+  ): Promise<PayoutRequest> {
     const payout = await this.payoutRepo.findOne({ where: { id: payoutId } });
     if (!payout) throw new NotFoundException(`Payout ${payoutId} not found`);
+
+    await this.assertArtistOwnership(requestingUserId, payout.artistId);
 
     if (payout.status !== PayoutStatus.FAILED) {
       throw new BadRequestException(
@@ -286,18 +318,20 @@ export class PayoutsService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Verify that `destinationAddress` belongs to the artist.
-   * In production this would query the Artist repository / profile service.
-   * We throw NotFoundException if the artist cannot be found (no Artist repo injected here).
+   * Verify that `destinationAddress` belongs to the authenticated artist profile.
    */
   protected async verifyArtistAddress(
-    artistId: string,
+    artist: Artist,
     destinationAddress: string,
   ): Promise<void> {
-    // Placeholder – override / extend in integration or inject ArtistRepository.
-    // Actual verification queries Artist.stellarAddress === destinationAddress.
+    if (artist.walletAddress !== destinationAddress) {
+      throw new ForbiddenException(
+        "Payout destination must match the authenticated artist wallet address.",
+      );
+    }
+
     this.logger.log(
-      `Address ownership check: artist=${artistId}, address=${destinationAddress}`,
+      `Verified payout wallet ownership for artist=${artist.id}, address=${destinationAddress}`,
     );
   }
 
@@ -461,5 +495,26 @@ export class PayoutsService {
 
   async markProcessing(payoutId: string): Promise<void> {
     await this.payoutRepo.update(payoutId, { status: PayoutStatus.PROCESSING });
+  }
+
+  private async assertArtistOwnership(
+    requestingUserId: string,
+    artistId: string,
+  ): Promise<Artist> {
+    const artist = await this.artistRepo.findOne({
+      where: { id: artistId, isDeleted: false },
+    });
+
+    if (!artist) {
+      throw new NotFoundException(`Artist ${artistId} not found`);
+    }
+
+    if (artist.userId !== requestingUserId) {
+      throw new ForbiddenException(
+        "You can only manage payouts for your own artist profile.",
+      );
+    }
+
+    return artist;
   }
 }

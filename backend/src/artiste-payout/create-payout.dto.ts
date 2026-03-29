@@ -22,7 +22,7 @@ export class CreatePayoutDto {
   @ApiProperty({ description: 'Asset code', enum: ['XLM', 'USDC'], example: 'XLM' })
   @IsString()
   @IsIn(['XLM', 'USDC'])
-  assetCode: string;
+  assetCode: 'XLM' | 'USDC';
 
   @ApiProperty({
     description: 'Stellar destination address (must be owned by artist)',

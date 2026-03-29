@@ -29,7 +29,7 @@ export class PayoutRequest {
   amount: number;
 
   @Column({ type: 'varchar', length: 12 })
-  assetCode: string;
+  assetCode: 'XLM' | 'USDC';
 
   @Column({ type: 'varchar', length: 56 })
   destinationAddress: string;

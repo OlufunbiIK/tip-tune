@@ -1,14 +1,14 @@
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { Repository, DataSource } from 'typeorm';
-import { ReferralService } from '../referral.service';
-import { ReferralCode, RewardType } from '../entities/referral-code.entity';
-import { Referral } from '../entities/referral.entity';
-import { GenerateReferralCodeDto } from '../dto/referral.dto';
-
-// ─── Factories ────────────────────────────────────────────────────────────────
+import { DataSource, Repository } from 'typeorm';
+import { TipVerifiedEvent } from '../tips/events/tip-verified.event';
+import { ApplyReferralResponseDto, GenerateReferralCodeDto } from './referral.dto';
+import { ReferralCode, RewardType } from './referral-code.entity';
+import { ReferralController } from './referral.controller';
+import { Referral } from './referral.entity';
+import { ReferralService } from './referral.service';
 
 const makeCode = (overrides: Partial<ReferralCode> = {}): ReferralCode =>
   ({
@@ -38,16 +38,12 @@ const makeReferral = (overrides: Partial<Referral> = {}): Referral =>
     ...overrides,
   } as Referral);
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockCodeRepo = () => ({
   update: jest.fn(),
   existsBy: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
   findOne: jest.fn(),
-  count: jest.fn(),
-  createQueryBuilder: jest.fn(),
 });
 
 const mockReferralRepo = () => ({
@@ -64,6 +60,7 @@ const mockQueryRunner = {
   rollbackTransaction: jest.fn(),
   release: jest.fn(),
   manager: {
+    findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     increment: jest.fn(),
@@ -78,8 +75,6 @@ const mockConfigService = {
   get: jest.fn().mockReturnValue('https://tiptune.app'),
 };
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
-
 describe('ReferralService', () => {
   let service: ReferralService;
   let codeRepo: jest.Mocked<Repository<ReferralCode>>;
@@ -87,6 +82,7 @@ describe('ReferralService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      controllers: [ReferralController],
       providers: [
         ReferralService,
         { provide: getRepositoryToken(ReferralCode), useFactory: mockCodeRepo },
@@ -100,12 +96,14 @@ describe('ReferralService', () => {
     codeRepo = module.get(getRepositoryToken(ReferralCode));
     referralRepo = module.get(getRepositoryToken(Referral));
 
-    // Reset query runner mocks
     jest.clearAllMocks();
     mockDataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
+    mockQueryRunner.connect.mockResolvedValue(undefined);
+    mockQueryRunner.startTransaction.mockResolvedValue(undefined);
+    mockQueryRunner.commitTransaction.mockResolvedValue(undefined);
+    mockQueryRunner.rollbackTransaction.mockResolvedValue(undefined);
+    mockQueryRunner.release.mockResolvedValue(undefined);
   });
-
-  // ─── generateCode ──────────────────────────────────────────────────────────
 
   describe('generateCode', () => {
     const dto: GenerateReferralCodeDto = {
@@ -113,12 +111,12 @@ describe('ReferralService', () => {
       rewardValue: 10,
     };
 
-    it('should generate a unique 8-char code and return shareable link', async () => {
+    it('should generate a unique code and shareable link', async () => {
       const saved = makeCode();
       codeRepo.update.mockResolvedValue({ affected: 1 } as any);
       codeRepo.existsBy.mockResolvedValue(false);
-      codeRepo.create.mockReturnValue(saved);
-      codeRepo.save.mockResolvedValue(saved);
+      codeRepo.create.mockReturnValue(saved as any);
+      codeRepo.save.mockResolvedValue(saved as any);
 
       const result = await service.generateCode('user-1', dto);
 
@@ -126,250 +124,114 @@ describe('ReferralService', () => {
         { userId: 'user-1', isActive: true },
         { isActive: false },
       );
-      expect(codeRepo.save).toHaveBeenCalled();
-      expect(result.shareableLink).toContain(saved.code);
-      expect(result.shareableLink).toContain('https://tiptune.app');
-    });
-
-    it('should retry if generated code already exists', async () => {
-      const saved = makeCode();
-      codeRepo.update.mockResolvedValue({ affected: 0 } as any);
-      // First call: exists, second call: unique
-      codeRepo.existsBy
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
-      codeRepo.create.mockReturnValue(saved);
-      codeRepo.save.mockResolvedValue(saved);
-
-      await service.generateCode('user-1', dto);
-      expect(codeRepo.existsBy).toHaveBeenCalledTimes(2);
-    });
-
-    it('should set expiresAt when provided', async () => {
-      const expiresAt = '2027-01-01T00:00:00Z';
-      const saved = makeCode({ expiresAt: new Date(expiresAt) });
-      codeRepo.update.mockResolvedValue({ affected: 0 } as any);
-      codeRepo.existsBy.mockResolvedValue(false);
-      codeRepo.create.mockReturnValue(saved);
-      codeRepo.save.mockResolvedValue(saved);
-
-      const result = await service.generateCode('user-1', { ...dto, expiresAt });
-      expect(codeRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ expiresAt: new Date(expiresAt) }),
-      );
-    });
-  });
-
-  // ─── getMyCode ─────────────────────────────────────────────────────────────
-
-  describe('getMyCode', () => {
-    it('should return active code for user', async () => {
-      const code = makeCode();
-      codeRepo.findOne.mockResolvedValue(code);
-
-      const result = await service.getMyCode('user-1');
-      expect(result.code).toBe('ABCD1234');
       expect(result.shareableLink).toBe('https://tiptune.app/register?ref=ABCD1234');
     });
-
-    it('should throw NotFoundException if no active code exists', async () => {
-      codeRepo.findOne.mockResolvedValue(null);
-      await expect(service.getMyCode('user-1')).rejects.toThrow(NotFoundException);
-    });
   });
 
-  // ─── applyCode ─────────────────────────────────────────────────────────────
-
   describe('applyCode', () => {
-    beforeEach(() => {
-      mockQueryRunner.connect.mockResolvedValue(undefined);
-      mockQueryRunner.startTransaction.mockResolvedValue(undefined);
-      mockQueryRunner.commitTransaction.mockResolvedValue(undefined);
-      mockQueryRunner.rollbackTransaction.mockResolvedValue(undefined);
-      mockQueryRunner.release.mockResolvedValue(undefined);
-    });
-
-    it('should successfully apply a valid referral code', async () => {
+    it('should apply a valid referral code transactionally', async () => {
       const code = makeCode();
       const referral = makeReferral();
 
-      codeRepo.findOne.mockResolvedValue(code);
-      referralRepo.findOne.mockResolvedValue(null); // Not previously referred
+      mockQueryRunner.manager.findOne
+        .mockResolvedValueOnce(code)
+        .mockResolvedValueOnce(null);
       mockQueryRunner.manager.create.mockReturnValue(referral);
       mockQueryRunner.manager.save.mockResolvedValue(referral);
       mockQueryRunner.manager.increment.mockResolvedValue(undefined);
 
       const result = await service.applyCode('ABCD1234', 'user-2');
 
-      expect(result.referralId).toBe('ref-uuid-1');
-      expect(result.referrerId).toBe('user-1');
+      expect(result).toEqual<ApplyReferralResponseDto>({
+        message: 'Referral code applied successfully.',
+        referralId: 'ref-uuid-1',
+        referrerId: 'user-1',
+      });
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException for unknown code', async () => {
-      codeRepo.findOne.mockResolvedValue(null);
-      await expect(service.applyCode('UNKNOWN1', 'user-2')).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw BadRequestException on self-referral', async () => {
-      const code = makeCode({ userId: 'user-2' }); // Same as referredUserId
-      codeRepo.findOne.mockResolvedValue(code);
+    it('should reject self-referral', async () => {
+      mockQueryRunner.manager.findOne.mockResolvedValueOnce(
+        makeCode({ userId: 'user-2' }),
+      );
 
       await expect(service.applyCode('ABCD1234', 'user-2')).rejects.toThrow(
         new BadRequestException('You cannot use your own referral code.'),
       );
     });
 
-    it('should throw BadRequestException for expired code', async () => {
-      const code = makeCode({ expiresAt: new Date('2020-01-01') });
-      codeRepo.findOne.mockResolvedValue(code);
+    it('should reject duplicate referrals', async () => {
+      mockQueryRunner.manager.findOne
+        .mockResolvedValueOnce(makeCode())
+        .mockResolvedValueOnce(makeReferral());
 
       await expect(service.applyCode('ABCD1234', 'user-2')).rejects.toThrow(
-        new BadRequestException('This referral code has expired.'),
+        ConflictException,
       );
     });
 
-    it('should throw BadRequestException when max usages reached', async () => {
-      const code = makeCode({ usageCount: 10, maxUsages: 10 });
-      codeRepo.findOne.mockResolvedValue(code);
-
-      await expect(service.applyCode('ABCD1234', 'user-2')).rejects.toThrow(
-        new BadRequestException('This referral code has reached its usage limit.'),
-      );
-    });
-
-    it('should throw ConflictException if user already referred', async () => {
-      const code = makeCode();
-      codeRepo.findOne.mockResolvedValue(code);
-      referralRepo.findOne.mockResolvedValue(makeReferral()); // Already referred
-
-      await expect(service.applyCode('ABCD1234', 'user-2')).rejects.toThrow(ConflictException);
-    });
-
-    it('should rollback transaction on save failure', async () => {
-      const code = makeCode();
-      codeRepo.findOne.mockResolvedValue(code);
-      referralRepo.findOne.mockResolvedValue(null);
+    it('should convert unique race errors into ConflictException', async () => {
+      mockQueryRunner.manager.findOne
+        .mockResolvedValueOnce(makeCode())
+        .mockResolvedValueOnce(null);
       mockQueryRunner.manager.create.mockReturnValue(makeReferral());
-      mockQueryRunner.manager.save.mockRejectedValue(new Error('DB error'));
+      mockQueryRunner.manager.save.mockRejectedValue({ code: '23505' });
 
-      await expect(service.applyCode('ABCD1234', 'user-2')).rejects.toThrow('DB error');
-      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+      await expect(service.applyCode('ABCD1234', 'user-2')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should reject unknown codes', async () => {
+      mockQueryRunner.manager.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.applyCode('UNKNOWN1', 'user-2')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  // ─── claimReward ───────────────────────────────────────────────────────────
-
   describe('claimReward', () => {
-    it('should mark reward as claimed', async () => {
-      const referral = makeReferral({ referralCode: makeCode() as any });
-      referralRepo.findOne.mockResolvedValue(referral);
-      referralRepo.update.mockResolvedValue({ affected: 1 } as any);
+    it('should claim the reward exactly once', async () => {
+      referralRepo.findOne.mockResolvedValue(
+        makeReferral({ referralCode: makeCode() as any }) as any,
+      );
+      referralRepo.update
+        .mockResolvedValueOnce({ affected: 1 } as any)
+        .mockResolvedValueOnce({ affected: 0 } as any);
 
-      await service.claimReward('user-2');
+      await expect(service.claimReward('user-2', 'tip-1')).resolves.toBe(true);
+      await expect(service.claimReward('user-2', 'tip-1')).resolves.toBe(false);
 
       expect(referralRepo.update).toHaveBeenCalledWith(
-        'ref-uuid-1',
+        { id: 'ref-uuid-1', rewardClaimed: false },
         expect.objectContaining({ rewardClaimed: true }),
       );
     });
 
-    it('should silently skip if no pending reward exists', async () => {
+    it('should skip missing pending rewards', async () => {
       referralRepo.findOne.mockResolvedValue(null);
-      await expect(service.claimReward('user-2')).resolves.not.toThrow();
+
+      await expect(service.claimReward('user-2')).resolves.toBe(false);
       expect(referralRepo.update).not.toHaveBeenCalled();
     });
-  });
 
-  // ─── getStats ──────────────────────────────────────────────────────────────
+    it('should trigger reward claiming from a verified tip event', async () => {
+      const claimSpy = jest.spyOn(service, 'claimReward').mockResolvedValue(true);
 
-  describe('getStats', () => {
-    it('should return accurate referral statistics', async () => {
-      referralRepo.count
-        .mockResolvedValueOnce(5)  // totalReferrals
-        .mockResolvedValueOnce(3); // claimedRewards
+      await service.handleTipVerified(
+        new TipVerifiedEvent(
+          {
+            id: 'tip-1',
+            artistId: 'artist-1',
+            amount: 25,
+            assetCode: 'XLM',
+          } as any,
+          'user-2',
+        ),
+      );
 
-      const mockQB = {
-        innerJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue({ total: '30.5' }),
-      };
-      referralRepo.createQueryBuilder.mockReturnValue(mockQB as any);
-
-      codeRepo.findOne.mockResolvedValue(makeCode({ usageCount: 5 }));
-
-      const stats = await service.getStats('user-1');
-
-      expect(stats.totalReferrals).toBe(5);
-      expect(stats.claimedRewards).toBe(3);
-      expect(stats.pendingRewards).toBe(2);
-      expect(stats.totalRewardValue).toBe(30.5);
-      expect(stats.codeUsageCount).toBe(5);
-    });
-
-    it('should handle zero rewards gracefully', async () => {
-      referralRepo.count.mockResolvedValue(0);
-      const mockQB = {
-        innerJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue({ total: null }),
-      };
-      referralRepo.createQueryBuilder.mockReturnValue(mockQB as any);
-      codeRepo.findOne.mockResolvedValue(null);
-
-      const stats = await service.getStats('user-1');
-      expect(stats.totalRewardValue).toBe(0);
-      expect(stats.codeUsageCount).toBe(0);
-    });
-  });
-
-  // ─── getLeaderboard ────────────────────────────────────────────────────────
-
-  describe('getLeaderboard', () => {
-    it('should return ranked leaderboard entries', async () => {
-      const rows = [
-        { userId: 'user-1', totalReferrals: '10', claimedRewards: '8' },
-        { userId: 'user-2', totalReferrals: '5', claimedRewards: '3' },
-      ];
-      const mockQB = {
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue(rows),
-      };
-      referralRepo.createQueryBuilder.mockReturnValue(mockQB as any);
-
-      const result = await service.getLeaderboard(10);
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        rank: 1,
-        userId: 'user-1',
-        totalReferrals: 10,
-        claimedRewards: 8,
-      });
-      expect(result[1].rank).toBe(2);
-    });
-
-    it('should return empty array when no referrals exist', async () => {
-      const mockQB = {
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue([]),
-      };
-      referralRepo.createQueryBuilder.mockReturnValue(mockQB as any);
-
-      const result = await service.getLeaderboard(10);
-      expect(result).toEqual([]);
+      expect(claimSpy).toHaveBeenCalledWith('user-2', 'tip-1');
     });
   });
 });

@@ -8,9 +8,11 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
 import { ConfigService } from "@nestjs/config";
+import { OnEvent } from "@nestjs/event-emitter";
 import { customAlphabet } from "nanoid";
 import { ReferralCode } from "./referral-code.entity";
 import { Referral } from "./referral.entity";
+import { TipVerifiedEvent } from "../tips/events/tip-verified.event";
 import {
   ApplyReferralResponseDto,
   GenerateReferralCodeDto,
@@ -94,50 +96,46 @@ export class ReferralService {
     code: string,
     referredUserId: string,
   ): Promise<ApplyReferralResponseDto> {
-    const referralCode = await this.referralCodeRepo.findOne({
-      where: { code, isActive: true },
-    });
-
-    if (!referralCode) {
-      throw new NotFoundException("Referral code not found or inactive.");
-    }
-
-    // Self-referral check
-    if (referralCode.userId === referredUserId) {
-      throw new BadRequestException("You cannot use your own referral code.");
-    }
-
-    // Expiry check
-    if (referralCode.expiresAt && referralCode.expiresAt < new Date()) {
-      throw new BadRequestException("This referral code has expired.");
-    }
-
-    // Max usage check
-    if (
-      referralCode.maxUsages !== null &&
-      referralCode.usageCount >= referralCode.maxUsages
-    ) {
-      throw new BadRequestException(
-        "This referral code has reached its usage limit.",
-      );
-    }
-
-    // Duplicate check — user already referred
-    const existing = await this.referralRepo.findOne({
-      where: { referredUserId },
-    });
-    if (existing) {
-      throw new ConflictException(
-        "You have already been referred by another user.",
-      );
-    }
-
-    // Transactional: create referral + increment usage
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const referralCode = await queryRunner.manager.findOne(ReferralCode, {
+        where: { code, isActive: true },
+      });
+
+      if (!referralCode) {
+        throw new NotFoundException("Referral code not found or inactive.");
+      }
+
+      if (referralCode.userId === referredUserId) {
+        throw new BadRequestException("You cannot use your own referral code.");
+      }
+
+      if (referralCode.expiresAt && referralCode.expiresAt < new Date()) {
+        throw new BadRequestException("This referral code has expired.");
+      }
+
+      if (
+        referralCode.maxUsages !== null &&
+        referralCode.usageCount >= referralCode.maxUsages
+      ) {
+        throw new BadRequestException(
+          "This referral code has reached its usage limit.",
+        );
+      }
+
+      const existing = await queryRunner.manager.findOne(Referral, {
+        where: { referredUserId },
+      });
+
+      if (existing) {
+        throw new ConflictException(
+          "You have already been referred by another user.",
+        );
+      }
+
       const referral = queryRunner.manager.create(Referral, {
         referrerId: referralCode.userId,
         referredUserId,
@@ -164,8 +162,15 @@ export class ReferralService {
         referralId: saved.id,
         referrerId: referralCode.userId,
       };
-    } catch (err) {
+    } catch (err: any) {
       await queryRunner.rollbackTransaction();
+
+      if (this.isUniqueViolation(err)) {
+        throw new ConflictException(
+          "You have already been referred by another user.",
+        );
+      }
+
       throw err;
     } finally {
       await queryRunner.release();
@@ -174,25 +179,51 @@ export class ReferralService {
 
   // ─── Claim Reward (triggered on first tip by referred user) ───────────────
 
-  async claimReward(referredUserId: string): Promise<void> {
+  async claimReward(
+    referredUserId: string,
+    triggerTipId?: string,
+  ): Promise<boolean> {
     const referral = await this.referralRepo.findOne({
       where: { referredUserId, rewardClaimed: false },
       relations: ["referralCode"],
     });
 
-    if (!referral) return; // No pending reward — silently skip
+    if (!referral) {
+      return false;
+    }
 
-    await this.referralRepo.update(referral.id, {
-      rewardClaimed: true,
-      rewardClaimedAt: new Date(),
-    });
+    const updateResult = await this.referralRepo.update(
+      { id: referral.id, rewardClaimed: false },
+      {
+        rewardClaimed: true,
+        rewardClaimedAt: new Date(),
+      },
+    );
+
+    if (!updateResult.affected) {
+      this.logger.debug(
+        `Reward already claimed for referred user ${referredUserId}; skipping duplicate trigger${triggerTipId ? ` for tip ${triggerTipId}` : ""}`,
+      );
+      return false;
+    }
 
     this.logger.log(
-      `Reward claimed for referrer ${referral.referrerId}: ${referral.referralCode.rewardType} = ${referral.referralCode.rewardValue}`,
+      `Reward claimed for referrer ${referral.referrerId}: ${referral.referralCode.rewardType} = ${referral.referralCode.rewardValue}${triggerTipId ? ` via tip ${triggerTipId}` : ""}`,
     );
 
     // TODO: integrate with reward dispatcher (XLM payment, badge grant, etc.)
     // await this.rewardDispatcher.dispatch(referral.referrerId, referral.referralCode);
+
+    return true;
+  }
+
+  @OnEvent("tip.verified", { async: true })
+  async handleTipVerified(event: TipVerifiedEvent): Promise<void> {
+    if (!event.senderUserId || event.amount <= 0) {
+      return;
+    }
+
+    await this.claimReward(event.senderUserId, event.tipId);
   }
 
   // ─── Stats ────────────────────────────────────────────────────────────────
@@ -275,5 +306,14 @@ export class ReferralService {
       shareableLink: `${baseUrl}/register?ref=${code.code}`,
       createdAt: code.createdAt,
     };
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505"
+    );
   }
 }

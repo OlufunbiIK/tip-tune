@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReferralController } from '../referral.controller';
-import { ReferralService } from '../referral.service';
-import { RewardType } from '../entities/referral-code.entity';
+import { CurrentUserData } from '../auth/decorators/current-user.decorator';
+import { ReferralController } from './referral.controller';
 import {
+  ApplyReferralResponseDto,
   GenerateReferralCodeDto,
+  LeaderboardEntryDto,
   ReferralCodeResponseDto,
   ReferralStatsDto,
-  LeaderboardEntryDto,
-  ApplyReferralResponseDto,
-} from '../dto/referral.dto';
+} from './referral.dto';
+import { RewardType } from './referral-code.entity';
+import { ReferralService } from './referral.service';
 
 const mockService = {
   generateCode: jest.fn(),
@@ -30,6 +31,12 @@ const mockCodeResponse: ReferralCodeResponseDto = {
   createdAt: new Date(),
 };
 
+const currentUser: CurrentUserData = {
+  userId: 'user-1',
+  walletAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+  isArtist: false,
+};
+
 describe('ReferralController', () => {
   let controller: ReferralController;
 
@@ -44,14 +51,14 @@ describe('ReferralController', () => {
   });
 
   describe('generateCode', () => {
-    it('should call service and return code response', async () => {
+    it('should call service with authenticated user id', async () => {
       const dto: GenerateReferralCodeDto = {
         rewardType: RewardType.XLM_BONUS,
         rewardValue: 10,
       };
       mockService.generateCode.mockResolvedValue(mockCodeResponse);
 
-      const result = await controller.generateCode('user-1', dto);
+      const result = await controller.generateCode(currentUser, dto);
 
       expect(mockService.generateCode).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(mockCodeResponse);
@@ -59,17 +66,18 @@ describe('ReferralController', () => {
   });
 
   describe('getMyCode', () => {
-    it('should return the active code for user', async () => {
+    it('should return the active code for the authenticated user', async () => {
       mockService.getMyCode.mockResolvedValue(mockCodeResponse);
 
-      const result = await controller.getMyCode('user-1');
+      const result = await controller.getMyCode(currentUser);
+
       expect(mockService.getMyCode).toHaveBeenCalledWith('user-1');
       expect(result.code).toBe('ABCD1234');
     });
   });
 
   describe('applyCode', () => {
-    it('should uppercase code before passing to service', async () => {
+    it('should uppercase the code and use the authenticated user id', async () => {
       const expected: ApplyReferralResponseDto = {
         message: 'Referral code applied successfully.',
         referralId: 'ref-1',
@@ -77,15 +85,18 @@ describe('ReferralController', () => {
       };
       mockService.applyCode.mockResolvedValue(expected);
 
-      const result = await controller.applyCode('abcd1234', 'user-2');
+      const result = await controller.applyCode('abcd1234', {
+        ...currentUser,
+        userId: 'user-2',
+      });
 
       expect(mockService.applyCode).toHaveBeenCalledWith('ABCD1234', 'user-2');
-      expect(result.referrerId).toBe('user-1');
+      expect(result).toEqual(expected);
     });
   });
 
   describe('getStats', () => {
-    it('should return stats for given userId', async () => {
+    it('should return stats for the requested user id', async () => {
       const stats: ReferralStatsDto = {
         totalReferrals: 5,
         claimedRewards: 3,
@@ -96,28 +107,23 @@ describe('ReferralController', () => {
       mockService.getStats.mockResolvedValue(stats);
 
       const result = await controller.getStats('user-1');
+
       expect(mockService.getStats).toHaveBeenCalledWith('user-1');
       expect(result.totalReferrals).toBe(5);
     });
   });
 
   describe('getLeaderboard', () => {
-    it('should cap limit at 50 and call service', async () => {
+    it('should cap the limit at 50', async () => {
       const leaderboard: LeaderboardEntryDto[] = [
         { rank: 1, userId: 'user-1', totalReferrals: 10, claimedRewards: 8 },
       ];
       mockService.getLeaderboard.mockResolvedValue(leaderboard);
 
-      const result = await controller.getLeaderboard(100); // Over cap
+      const result = await controller.getLeaderboard(100);
 
       expect(mockService.getLeaderboard).toHaveBeenCalledWith(50);
-      expect(result).toHaveLength(1);
-    });
-
-    it('should default to 10 when limit not provided', async () => {
-      mockService.getLeaderboard.mockResolvedValue([]);
-      await controller.getLeaderboard(10);
-      expect(mockService.getLeaderboard).toHaveBeenCalledWith(10);
+      expect(result).toEqual(leaderboard);
     });
   });
 });

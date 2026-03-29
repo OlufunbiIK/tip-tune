@@ -39,6 +39,8 @@ import { WebSocketModule } from "./websocket/websocket.module";
 import { CustomThrottlerRedisStorage } from "./custom-throttler-storage-redis";
 import { VaryAcceptEncodingMiddleware } from "./common/middleware/vary-accept-encoding.middleware";
 import { SubscriptionsModule } from "./subscription-tiers/subscriptions.module";
+import { ReferralModule } from "./social-sharing/referral.module";
+import { PayoutsModule } from "./artiste-payout/payouts.module";
 import { validate } from "./config/env.validation";
 
 @Module({
@@ -116,6 +118,8 @@ import { validate } from "./config/env.validation";
     ArtistStatusModule,
     WebSocketModule,
     SubscriptionsModule,
+    ReferralModule,
+    PayoutsModule,
   ],
   controllers: [],
   providers: [

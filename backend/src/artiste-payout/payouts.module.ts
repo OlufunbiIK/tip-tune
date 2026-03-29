@@ -9,11 +9,17 @@ import { PayoutReconciliationScheduler } from "./payout-reconciliation.scheduler
 import { PayoutRequest } from "./payout-request.entity";
 import { ArtistBalance } from "./artist-balance.entity";
 import { ArtistBalanceAudit } from "./artist-balance-audit.entity";
+import { Artist } from "../artists/entities/artist.entity";
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([PayoutRequest, ArtistBalance, ArtistBalanceAudit]),
+    TypeOrmModule.forFeature([
+      PayoutRequest,
+      ArtistBalance,
+      ArtistBalanceAudit,
+      Artist,
+    ]),
   ],
   controllers: [PayoutsController],
   providers: [PayoutsService, PayoutProcessorService, PayoutReconciliationService, PayoutReconciliationScheduler],

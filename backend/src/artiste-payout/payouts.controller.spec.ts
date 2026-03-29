@@ -1,14 +1,26 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { CurrentUserData } from '../auth/decorators/current-user.decorator';
+import { ArtistBalance } from './artist-balance.entity';
+import { CreatePayoutDto } from './create-payout.dto';
+import { PayoutRequest, PayoutStatus } from './payout-request.entity';
 import { PayoutsController } from './payouts.controller';
 import { PayoutsService } from './payouts.service';
-import { PayoutRequest, PayoutStatus } from './entities/payout-request.entity';
-import { ArtistBalance } from './entities/artist-balance.entity';
-import { CreatePayoutDto } from './dto/create-payout.dto';
 
 const ARTIST_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
 const PAYOUT_ID = 'p1a2y3o4-0000-0000-0000-000000000001';
 const DEST_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+
+const currentUser: CurrentUserData = {
+  userId: 'user-123',
+  walletAddress: DEST_ADDRESS,
+  isArtist: true,
+};
 
 function makePayout(overrides: Partial<PayoutRequest> = {}): PayoutRequest {
   return Object.assign(new PayoutRequest(), {
@@ -33,6 +45,7 @@ function makeBalance(overrides: Partial<ArtistBalance> = {}): ArtistBalance {
     xlmBalance: 100,
     usdcBalance: 50,
     pendingXlm: 0,
+    pendingUsdc: 0,
     lastUpdated: new Date(),
     ...overrides,
   });
@@ -57,11 +70,8 @@ describe('PayoutsController', () => {
     }).compile();
 
     controller = module.get<PayoutsController>(PayoutsController);
+    jest.clearAllMocks();
   });
-
-  afterEach(() => jest.clearAllMocks());
-
-  // ── POST /api/payouts/request ───────────────────────────────────────────────
 
   describe('requestPayout', () => {
     const dto: CreatePayoutDto = {
@@ -71,84 +81,94 @@ describe('PayoutsController', () => {
       destinationAddress: DEST_ADDRESS,
     };
 
-    it('creates and returns a payout', async () => {
+    it('should scope payout requests to the authenticated user', async () => {
       const payout = makePayout();
       service.requestPayout.mockResolvedValue(payout);
-      await expect(controller.requestPayout(dto)).resolves.toEqual(payout);
-      expect(service.requestPayout).toHaveBeenCalledWith(dto);
+
+      await expect(controller.requestPayout(currentUser, dto)).resolves.toEqual(payout);
+      expect(service.requestPayout).toHaveBeenCalledWith('user-123', dto);
     });
 
-    it('propagates BadRequestException', async () => {
+    it('should propagate BadRequestException', async () => {
       service.requestPayout.mockRejectedValue(new BadRequestException('below threshold'));
-      await expect(controller.requestPayout(dto)).rejects.toThrow(BadRequestException);
+
+      await expect(controller.requestPayout(currentUser, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
-    it('propagates ConflictException', async () => {
+    it('should propagate ConflictException', async () => {
       service.requestPayout.mockRejectedValue(new ConflictException('duplicate'));
-      await expect(controller.requestPayout(dto)).rejects.toThrow(ConflictException);
+
+      await expect(controller.requestPayout(currentUser, dto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
-
-  // ── GET /api/payouts/history/:artistId ─────────────────────────────────────
 
   describe('getHistory', () => {
-    it('returns history list', async () => {
-      const list = [makePayout(), makePayout({ id: 'uuid2', status: PayoutStatus.COMPLETED })];
-      service.getHistory.mockResolvedValue(list);
-      await expect(controller.getHistory(ARTIST_ID)).resolves.toEqual(list);
-    });
+    it('should scope history to the authenticated artist', async () => {
+      const payouts = [makePayout(), makePayout({ id: 'uuid-2', status: PayoutStatus.COMPLETED })];
+      service.getHistory.mockResolvedValue(payouts);
 
-    it('returns empty array when no history', async () => {
-      service.getHistory.mockResolvedValue([]);
-      await expect(controller.getHistory(ARTIST_ID)).resolves.toEqual([]);
+      await expect(controller.getHistory(currentUser, ARTIST_ID)).resolves.toEqual(payouts);
+      expect(service.getHistory).toHaveBeenCalledWith('user-123', ARTIST_ID);
     });
   });
-
-  // ── GET /api/payouts/balance/:artistId ─────────────────────────────────────
 
   describe('getBalance', () => {
-    it('returns artist balance', async () => {
+    it('should return the owned artist balance', async () => {
       const balance = makeBalance();
       service.getBalance.mockResolvedValue(balance);
-      await expect(controller.getBalance(ARTIST_ID)).resolves.toEqual(balance);
+
+      await expect(controller.getBalance(currentUser, ARTIST_ID)).resolves.toEqual(balance);
+      expect(service.getBalance).toHaveBeenCalledWith('user-123', ARTIST_ID);
     });
 
-    it('propagates NotFoundException', async () => {
-      service.getBalance.mockRejectedValue(new NotFoundException());
-      await expect(controller.getBalance(ARTIST_ID)).rejects.toThrow(NotFoundException);
+    it('should propagate ForbiddenException', async () => {
+      service.getBalance.mockRejectedValue(new ForbiddenException());
+
+      await expect(controller.getBalance(currentUser, ARTIST_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
-
-  // ── GET /api/payouts/:payoutId/status ──────────────────────────────────────
 
   describe('getStatus', () => {
-    it('returns payout status', async () => {
+    it('should scope payout status lookups to the authenticated artist', async () => {
       const payout = makePayout();
       service.getStatus.mockResolvedValue(payout);
-      await expect(controller.getStatus(PAYOUT_ID)).resolves.toEqual(payout);
+
+      await expect(controller.getStatus(currentUser, PAYOUT_ID)).resolves.toEqual(payout);
+      expect(service.getStatus).toHaveBeenCalledWith('user-123', PAYOUT_ID);
     });
 
-    it('propagates NotFoundException', async () => {
+    it('should propagate NotFoundException', async () => {
       service.getStatus.mockRejectedValue(new NotFoundException());
-      await expect(controller.getStatus(PAYOUT_ID)).rejects.toThrow(NotFoundException);
+
+      await expect(controller.getStatus(currentUser, PAYOUT_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  // ── POST /api/payouts/:payoutId/retry ──────────────────────────────────────
-
   describe('retryPayout', () => {
-    it('retries and returns updated payout', async () => {
+    it('should scope retries to the authenticated artist', async () => {
       const payout = makePayout({ status: PayoutStatus.PENDING, failureReason: null });
       service.retryPayout.mockResolvedValue(payout);
-      await expect(controller.retryPayout(PAYOUT_ID)).resolves.toEqual(payout);
-      expect(service.retryPayout).toHaveBeenCalledWith(PAYOUT_ID);
+
+      await expect(controller.retryPayout(currentUser, PAYOUT_ID)).resolves.toEqual(payout);
+      expect(service.retryPayout).toHaveBeenCalledWith('user-123', PAYOUT_ID);
     });
 
-    it('propagates BadRequestException for non-failed payout', async () => {
+    it('should propagate BadRequestException', async () => {
       service.retryPayout.mockRejectedValue(
         new BadRequestException('Only failed payouts can be retried'),
       );
-      await expect(controller.retryPayout(PAYOUT_ID)).rejects.toThrow(BadRequestException);
+
+      await expect(controller.retryPayout(currentUser, PAYOUT_ID)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
