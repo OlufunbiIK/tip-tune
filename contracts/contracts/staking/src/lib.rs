@@ -91,7 +91,7 @@ impl StakingContract {
         let mut info = Self::get_or_default_stake(&env, &artist);
         info.pending_rewards = info
             .pending_rewards
-            .checked_add(Self::calculate_accrued(&env, &info))
+            .checked_add(Self::calculate_accrued_checked(&env, &info)?)
             .ok_or(Error::Overflow)?;
 
         client.transfer(&artist, &env.current_contract_address(), &amount);
@@ -121,7 +121,7 @@ impl StakingContract {
 
         info.pending_rewards = info
             .pending_rewards
-            .checked_add(Self::calculate_accrued(&env, &info))
+            .checked_add(Self::calculate_accrued_checked(&env, &info)?)
             .ok_or(Error::Overflow)?;
 
         info.amount -= amount;
@@ -146,7 +146,7 @@ impl StakingContract {
         );
 
         let total: i128 = env.storage().instance().get(&DataKey::TotalStaked).unwrap_or(0);
-        env.storage().instance().set(&DataKey::TotalStaked, &(total.saturating_sub(amount)));
+        env.storage().instance().set(&DataKey::TotalStaked, &(total.checked_sub(amount).ok_or(Error::Overflow)?));
 
         env.events().publish((symbol_short!("unstaked"), artist.clone()), (amount, available_at));
         Ok(())
@@ -181,7 +181,7 @@ impl StakingContract {
             .get(&DataKey::Stake(artist.clone()))
             .ok_or(Error::NoStake)?;
 
-        let accrued = Self::calculate_accrued(&env, &info);
+        let accrued = Self::calculate_accrued_checked(&env, &info)?;
         let total_rewards = info.pending_rewards.checked_add(accrued).ok_or(Error::Overflow)?;
 
         if total_rewards == 0 {
@@ -228,20 +228,25 @@ impl StakingContract {
             .get(&DataKey::Stake(artist.clone()))
             .ok_or(Error::NoStake)?;
 
-        let slash_amount = (info.amount * SLASH_RATE_BPS) / BPS_DENOM;
+        let slash_amount = info
+            .amount
+            .checked_mul(SLASH_RATE_BPS)
+            .ok_or(Error::Overflow)?
+            .checked_div(BPS_DENOM)
+            .ok_or(Error::Overflow)?;
 
         let token = Self::get_token(&env);
         let client = token::Client::new(&env, &token);
         client.transfer(&env.current_contract_address(), &admin, &slash_amount);
 
-        info.amount -= slash_amount;
+        info.amount = info.amount.checked_sub(slash_amount).ok_or(Error::Overflow)?;
         info.pending_rewards = 0;
         info.since_ledger = env.ledger().sequence();
         env.storage().persistent().set(&DataKey::Stake(artist.clone()), &info);
         env.storage().persistent().set(&DataKey::Slashed(artist.clone()), &true);
 
         let total: i128 = env.storage().instance().get(&DataKey::TotalStaked).unwrap_or(0);
-        env.storage().instance().set(&DataKey::TotalStaked, &(total.saturating_sub(slash_amount)));
+        env.storage().instance().set(&DataKey::TotalStaked, &(total.checked_sub(slash_amount).ok_or(Error::Overflow)?));
 
         env.events().publish((symbol_short!("slashed"), artist.clone()), slash_amount);
         Ok(slash_amount)
@@ -269,10 +274,21 @@ impl StakingContract {
         env.storage().instance().get(&DataKey::TotalStaked).unwrap_or(0)
     }
 
+    pub fn reward_rate_bps(_env: Env) -> i128 {
+        REWARD_RATE_BPS
+    }
+
+    pub fn cooldown_ledgers(_env: Env) -> u32 {
+        COOLDOWN_LEDGERS
+    }
+
     pub fn pending_rewards(env: Env, artist: Address) -> i128 {
         match env.storage().persistent().get::<DataKey, StakeInfo>(&DataKey::Stake(artist)) {
             None => 0,
-            Some(i) => i.pending_rewards + Self::calculate_accrued(&env, &i),
+            Some(i) => i
+                .pending_rewards
+                .checked_add(Self::calculate_accrued(&env, &i))
+                .unwrap_or(i128::MAX),
         }
     }
 
@@ -286,7 +302,12 @@ impl StakingContract {
             .ok_or(Error::NotInitialised)?;
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &new_admin);
+        env.events().publish((symbol_short!("adminset"), new_admin.clone()), ());
         Ok(())
+    }
+
+    pub fn get_admin(env: Env) -> Result<Address, Error> {
+        env.storage().instance().get(&DataKey::Admin).ok_or(Error::NotInitialised)
     }
 
     fn assert_initialised(env: &Env) -> Result<(), Error> {
@@ -319,9 +340,19 @@ impl StakingContract {
     }
 
     fn calculate_accrued(env: &Env, info: &StakeInfo) -> i128 {
-        if info.amount == 0 { return 0; }
+        Self::calculate_accrued_checked(env, info).unwrap_or(0)
+    }
+
+    fn calculate_accrued_checked(env: &Env, info: &StakeInfo) -> Result<i128, Error> {
+        if info.amount == 0 { return Ok(0); }
         let elapsed = (env.ledger().sequence() as i128).saturating_sub(info.since_ledger as i128);
-        (info.amount * REWARD_RATE_BPS * elapsed) / (BPS_DENOM * LEDGERS_PER_YEAR)
+        let numerator = info
+            .amount
+            .checked_mul(REWARD_RATE_BPS)
+            .ok_or(Error::Overflow)?
+            .checked_mul(elapsed)
+            .ok_or(Error::Overflow)?;
+        Ok(numerator / (BPS_DENOM * LEDGERS_PER_YEAR))
     }
 
     fn isqrt(n: u64) -> u64 {
