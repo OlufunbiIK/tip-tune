@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, CheckCircle, AlertCircle, Info, Coins } from 'lucide-react';
 import { useReducedMotion } from '../utils/animationUtils';
+import type { ToastPriority } from '../contexts/tipToastQueue';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning' | 'tip';
 
@@ -9,6 +10,7 @@ export interface ToastProps {
   type: ToastType;
   title: string;
   message: string;
+  priority?: ToastPriority;
   duration?: number;
   onClose: (id: string) => void;
 }
@@ -34,6 +36,7 @@ export const Toast: React.FC<ToastProps> = ({
   type,
   title,
   message,
+  priority = 'normal',
   duration = 5000,
   onClose,
 }) => {
@@ -87,6 +90,7 @@ export const Toast: React.FC<ToastProps> = ({
       className={[
         'relative flex flex-col w-full max-w-sm overflow-hidden',
         'rounded-xl bg-[#1a2942] border border-white/8 border-l-4 shadow-2xl shadow-black/40',
+        priority === 'high' ? 'ring-1 ring-amber-300/70' : '',
         ACCENT_COLORS[type],
         !reducedMotion && !exiting ? 'animate-slide-bounce' : '',
         !reducedMotion && exiting ? 'opacity-0 translate-x-full transition-all duration-300' : '',
