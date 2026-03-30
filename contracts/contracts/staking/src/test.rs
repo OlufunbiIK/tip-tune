@@ -505,3 +505,99 @@ fn test_rewards_preserved_across_stake_additions() {
     let info = c.get_stake(&t.artist1).unwrap();
     assert!(info.pending_rewards > 0, "Pending rewards lost on re-stake");
 }
+
+#[test]
+fn test_withdraw_at_exact_cooldown_boundary_succeeds() {
+    let t = setup();
+    let c = client(&t.env, &t.contract);
+
+    c.stake(&t.artist1, &100_0000000_i128);
+    c.unstake(&t.artist1, &40_0000000_i128);
+
+    advance_ledgers(&t.env, COOLDOWN_LEDGERS);
+    let withdrawn = c.withdraw(&t.artist1);
+    assert_eq!(withdrawn, 40_0000000_i128);
+}
+
+#[test]
+fn test_partial_unstake_repeated_operations_preserve_accounting() {
+    let t = setup();
+    let c = client(&t.env, &t.contract);
+
+    c.stake(&t.artist1, &100_0000000_i128);
+    c.unstake(&t.artist1, &30_0000000_i128);
+    advance_ledgers(&t.env, 10);
+    c.unstake(&t.artist1, &20_0000000_i128);
+
+    let request = c.get_unstake_request(&t.artist1).unwrap();
+    assert_eq!(request.amount, 50_0000000_i128);
+    assert_eq!(c.total_staked(), 50_0000000_i128);
+
+    advance_ledgers(&t.env, COOLDOWN_LEDGERS - 10);
+    assert_eq!(c.try_withdraw(&t.artist1), Err(Ok(Error::CooldownNotMet)));
+
+    advance_ledgers(&t.env, 11);
+    let withdrawn = c.withdraw(&t.artist1);
+    assert_eq!(withdrawn, 50_0000000_i128);
+    assert_eq!(c.total_staked(), 50_0000000_i128);
+}
+
+#[test]
+fn test_repeated_claims_have_stable_reward_math() {
+    let t = setup();
+    let c = client(&t.env, &t.contract);
+
+    c.stake(&t.artist1, &1_000_0000000_i128);
+
+    let quarter_year = (LEDGERS_PER_YEAR as u32) / 4;
+    advance_ledgers(&t.env, quarter_year);
+    let first_claim = c.claim_rewards(&t.artist1);
+    assert!(first_claim > 0);
+
+    advance_ledgers(&t.env, quarter_year);
+    let second_claim = c.claim_rewards(&t.artist1);
+    assert!(second_claim > 0);
+
+    let drift = if first_claim > second_claim {
+        first_claim - second_claim
+    } else {
+        second_claim - first_claim
+    };
+    assert!(drift < 50_000, "reward drift is too large: {}", drift);
+}
+
+#[test]
+fn test_slash_restore_invariants_do_not_corrupt_totals() {
+    let t = setup();
+    let c = client(&t.env, &t.contract);
+
+    c.stake(&t.artist1, &500_0000000_i128);
+    c.stake(&t.artist2, &300_0000000_i128);
+    advance_ledgers(&t.env, 25_000);
+
+    let total_before_slash = c.total_staked();
+    let slash_amount = c.slash(&t.artist1);
+    let total_after_slash = c.total_staked();
+
+    assert_eq!(total_after_slash, total_before_slash - slash_amount);
+
+    let slashed_info = c.get_stake(&t.artist1).unwrap();
+    assert_eq!(slashed_info.pending_rewards, 0);
+    assert!(c.is_slashed(&t.artist1));
+
+    c.restore(&t.artist1);
+    assert!(!c.is_slashed(&t.artist1));
+
+    c.stake(&t.artist1, &MIN_STAKE);
+    assert_eq!(c.total_staked(), total_after_slash + MIN_STAKE);
+}
+
+#[test]
+fn test_public_helpers_expose_admin_and_constants() {
+    let t = setup();
+    let c = client(&t.env, &t.contract);
+
+    assert_eq!(c.reward_rate_bps(), REWARD_RATE_BPS);
+    assert_eq!(c.cooldown_ledgers(), COOLDOWN_LEDGERS);
+    assert_eq!(c.get_admin().unwrap(), t.admin);
+}

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import io, { Socket } from 'socket.io-client';
 import apiClient from '../utils/api';
 import { useWallet } from './useWallet';
+import { enqueueTipToast, type ToastPriority } from '../contexts/tipToastQueue';
 
 export interface Notification {
   id: string;
@@ -18,12 +19,41 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const socketRef = useRef<Socket | null>(null);
+  const seenNotificationIdsRef = useRef<Set<string>>(new Set());
+
+  const inferTipPriority = (notification: Notification): ToastPriority => {
+    const rawAmount =
+      typeof notification.data?.amount === 'number'
+        ? notification.data.amount
+        : typeof notification.data?.tipAmount === 'number'
+          ? notification.data.tipAmount
+          : 0;
+
+    return rawAmount >= 25 ? 'high' : 'normal';
+  };
+
+  const enqueueTipToastFromNotification = useCallback((notification: Notification) => {
+    enqueueTipToast({
+      id: notification.id,
+      tipId: notification.id,
+      title: notification.title,
+      message: notification.message,
+      priority: inferTipPriority(notification),
+      createdAt: notification.createdAt,
+      duration: 5000,
+    });
+  }, []);
 
   // Fetch initial notifications
   const fetchNotifications = useCallback(async () => {
     try {
       const response = await apiClient.get('/notifications');
       setNotifications(response.data.data);
+      seenNotificationIdsRef.current = new Set(
+        (response.data.data as Notification[])
+          .map((notification) => notification.id)
+          .filter((id): id is string => Boolean(id)),
+      );
       
       const countResponse = await apiClient.get('/notifications/unread-count');
       setUnreadCount(countResponse.data.count);
@@ -51,8 +81,14 @@ export const useNotifications = () => {
     });
 
     socketRef.current.on('tipReceived', (notification: Notification) => {
+      if (seenNotificationIdsRef.current.has(notification.id)) {
+        return;
+      }
+
+      seenNotificationIdsRef.current.add(notification.id);
       setNotifications((prev) => [notification, ...prev]);
       setUnreadCount((prev) => prev + 1);
+      enqueueTipToastFromNotification(notification);
       
       // Optional: Play sound
       // const audio = new Audio('/notification.mp3');
@@ -64,7 +100,7 @@ export const useNotifications = () => {
         socketRef.current.disconnect();
       }
     };
-  }, []);
+  }, [enqueueTipToastFromNotification]);
 
   // Initial fetch
   useEffect(() => {
