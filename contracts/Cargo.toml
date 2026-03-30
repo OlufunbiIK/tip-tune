@@ -1,5 +1,5 @@
 [workspace]
-members = ["*", "contracts/*"]
+members = ["lottery", "tip-escrow"]
 
 [profile.release]
 opt-level = "z"
