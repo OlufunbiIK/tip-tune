@@ -6,7 +6,6 @@ pub(crate) const PERSISTENT_BUMP_AMOUNT: u32 = 30 * DAY_IN_LEDGERS;
 pub(crate) const PERSISTENT_THRESHOLD: u32 = 7 * DAY_IN_LEDGERS;
 pub(crate) const INSTANCE_BUMP_AMOUNT: u32 = 7 * DAY_IN_LEDGERS;
 pub(crate) const INSTANCE_THRESHOLD: u32 = 2 * DAY_IN_LEDGERS;
-
 pub(crate) const MAX_LOGS_PER_TRACK: u32 = 50;
 
 #[contracttype]
@@ -89,13 +88,11 @@ pub fn add_distribution_log(env: &Env, track_id: &String, record: &DistributionR
     extend_instance(env);
 }
 
-pub fn get_distribution_log(env: &Env, track_id: &String, absolute_index: u32) -> Option<DistributionRecord> {
-    let total_count = get_log_count(env, track_id);
-    
-    // Only return if it's within the retention window
-    if absolute_index < total_count.saturating_sub(MAX_LOGS_PER_TRACK) || absolute_index >= total_count {
-        return None;
-    }
+#[allow(dead_code)]
+pub fn get_global_log_count(env: &Env) -> u64 {
+    extend_instance(env);
+    env.storage().instance().get(&StorageKey::GlobalLogCount).unwrap_or(0)
+}
     
     let storage_index = absolute_index % MAX_LOGS_PER_TRACK;
     let key = StorageKey::DistributionLog(track_id.clone(), storage_index);

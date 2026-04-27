@@ -61,12 +61,12 @@ pub fn get_recent_settlements(
     Ok(settlements)
 }
 
-/// Check if a settlement has been recorded for a payout
+#[allow(dead_code)]
 pub fn is_settled(env: Env, payout_id: String) -> bool {
     storage_is_settled(&env, &payout_id)
 }
 
-/// Get total settlement count for a track
+#[allow(dead_code)]
 pub fn get_track_settlement_count(env: Env, track_id: String) -> u32 {
     get_log_count(&env, &track_id)
 }
