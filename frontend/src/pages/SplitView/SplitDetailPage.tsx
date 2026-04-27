@@ -63,10 +63,10 @@ const SplitDetailPage: React.FC = () => {
       if (data.meta.activityFetchFailed) {
         console.warn('Activity feed failed to load');
       }
-    } catch (err: any) {
-      const message = err?.response?.status === 404
+    } catch (err: unknown) {
+      const message = (err as { response?: { status?: number }; message?: string })?.response?.status === 404
         ? 'Split not found. It may have been removed or the ID is invalid.'
-        : err?.message ?? 'Failed to load split detail.';
+        : (err as { message?: string })?.message ?? 'Failed to load split detail.';
       setError(message);
     } finally {
       setIsLoading(false);

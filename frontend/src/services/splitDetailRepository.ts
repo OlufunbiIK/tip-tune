@@ -13,8 +13,7 @@
  */
 
 import apiClient from '../utils/api-client';
-import { sessionManager, Participant } from '../utils/session';
-import type { Collaboration, Artist, Track } from '../types';
+import { sessionManager } from '../utils/session';
 
 // ============================================================================
 // Types
@@ -28,7 +27,7 @@ export interface SplitDetailViewModel {
   /** Receipt data if available */
   receipts?: Record<string, ReceiptData>;
   /** Activity feed for this split */
-  activities: ActivityItem[];
+  activities: Activity[];
   /** Signed URLs for any associated assets */
   signedUrls?: Record<string, string>;
   /** Metadata about the fetch operation */
@@ -43,7 +42,7 @@ export interface SplitDetailViewModel {
 export interface SplitDetail {
   id: string;
   trackId: string;
-  track?: Track;
+  track?: any;
   collaborators: CollaboratorSplit[];
   totalSplitPercentage: number;
   remainingSplitPercentage: number;
@@ -61,7 +60,7 @@ export interface CollaboratorSplit {
   invitationMessage?: string;
   rejectionReason?: string;
   respondedAt?: string;
-  artist?: Artist;
+  artist?: any;
 }
 
 export interface ParticipantProfile {
@@ -82,15 +81,14 @@ export interface ReceiptData {
   status: 'pending' | 'verified' | 'failed' | 'reversed';
 }
 
-export interface ActivityItem {
+export interface Activity {
   id: string;
-  type: 'collaboration_invited' | 'collaboration_accepted' | 'collaboration_rejected' | 'split_updated' | 'receipt_generated';
+  type: string;
   actorId: string;
   actorName?: string;
   targetId: string;
   description: string;
   timestamp: string;
-  metadata?: Record<string, unknown>;
 }
 
 export interface SplitDetailRepositoryOptions {
@@ -187,7 +185,22 @@ class SplitDetailRepository {
     const data = response.data;
 
     // Transform API response to SplitDetail
-    const collaborators: CollaboratorSplit[] = data.collaborators?.map((collab: any) => ({
+    const collaborators: CollaboratorSplit[] = data.collaborators?.map((collab: {
+      id: string;
+      artistId: string;
+      role: string;
+      splitPercentage: number;
+      approvalStatus: string;
+      invitationMessage?: string;
+      rejectionReason?: string;
+      respondedAt?: string;
+      artist?: {
+        id: string;
+        artistName: string;
+        profileImage?: string;
+        walletAddress?: string;
+      };
+    }) => ({
       id: collab.id,
       artistId: collab.artistId,
       artistName: collab.artist?.artistName,
@@ -220,17 +233,24 @@ class SplitDetailRepository {
   /**
    * Fetch activity feed for this split
    */
-  private async fetchActivities(splitId: string): Promise<ActivityItem[]> {
+  private async fetchActivities(splitId: string): Promise<Activity[]> {
     const response = await apiClient.get(`/collaborations/${splitId}/activities`);
-    return response.data?.map((item: any) => ({
-      id: item.id,
-      type: item.type,
-      actorId: item.actorId,
-      actorName: item.actorName,
-      targetId: item.targetId,
-      description: item.description,
-      timestamp: item.timestamp,
-      metadata: item.metadata,
+    return response.data?.map((activity: {
+      id: string;
+      type: string;
+      actorId: string;
+      actorName?: string;
+      targetId: string;
+      description: string;
+      timestamp: string;
+    }) => ({
+      id: activity.id,
+      type: activity.type,
+      actorId: activity.actorId,
+      actorName: activity.actorName,
+      targetId: activity.targetId,
+      description: activity.description,
+      timestamp: activity.timestamp,
     })) || [];
   }
 
@@ -241,14 +261,21 @@ class SplitDetailRepository {
     const response = await apiClient.get(`/collaborations/${splitId}/receipts`);
     const receipts: Record<string, ReceiptData> = {};
     
-    response.data?.forEach((receipt: any) => {
+    response.data?.forEach((receipt: {
+      id: string;
+      amount: number;
+      assetCode: string;
+      stellarTxHash: string;
+      timestamp: string;
+      status: string;
+    }) => {
       receipts[receipt.id] = {
         id: receipt.id,
         amount: Number(receipt.amount),
         assetCode: receipt.assetCode,
         stellarTxHash: receipt.stellarTxHash,
         timestamp: receipt.timestamp,
-        status: receipt.status,
+        status: receipt.status as 'pending' | 'verified' | 'failed' | 'reversed',
       };
     });
 
@@ -296,7 +323,7 @@ class SplitDetailRepository {
           bio: artist.bio,
           profileImage: artist.profileImage,
         };
-      } catch (error) {
+      } catch (error: unknown) {
         // Fallback to session if available
         if (useSessionFallback) {
           const sessionParticipant = sessionManager.getParticipant(collab.artistId);
@@ -365,10 +392,10 @@ class SplitDetailRepository {
    * Enhance activities with actor names from profiles or session
    */
   private enhanceActivities(
-    activities: ActivityItem[],
+    activities: Activity[],
     profiles: Record<string, ParticipantProfile>,
     useSessionFallback: boolean
-  ): ActivityItem[] {
+  ): Activity[] {
     return activities.map((activity) => {
       if (!activity.actorName) {
         // Try to get name from profiles
@@ -393,14 +420,3 @@ class SplitDetailRepository {
 
 // Export singleton instance
 export const splitDetailRepository = new SplitDetailRepository();
-
-// Export types
-export type {
-  SplitDetailViewModel,
-  SplitDetail,
-  CollaboratorSplit,
-  ParticipantProfile,
-  ReceiptData,
-  ActivityItem,
-  SplitDetailRepositoryOptions,
-};

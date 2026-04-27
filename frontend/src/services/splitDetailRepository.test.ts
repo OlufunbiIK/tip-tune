@@ -21,7 +21,7 @@ describe('SplitDetailRepository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Clear session manager state
-    (sessionManager as any).participantDirectory = new Map();
+    (sessionManager as unknown as { participantDirectory: Map<string, unknown> }).participantDirectory = new Map();
   });
 
   describe('getSplitDetail', () => {
