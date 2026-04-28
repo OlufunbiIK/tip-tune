@@ -1,6 +1,6 @@
-use soroban_sdk::{symbol_short, Address, Env, String};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, String};
 
-use crate::{BadgeType, DataKey, Error};
+use crate::{BadgeType, DataKey};
 
 /// Configurable catalog entry for a badge type.
 ///

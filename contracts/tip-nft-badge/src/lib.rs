@@ -1,12 +1,14 @@
 #![no_std]
 
 mod catalog;
+mod receipts;
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Vec,
 };
 
 pub use catalog::{BadgeCatalogEntry, CatalogKey};
+pub use receipts::BadgeMintReceipt;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -59,8 +61,10 @@ pub enum DataKey {
     Admin,
     UserStats(Address),
     UserBadges(Address),
+    UserBadgeReceipts(Address),
     BadgeMinted(Address, u32), // user + badge_type ordinal
     BadgeRecord(String),
+    BadgeReceipt(String),
     TotalBadges,
     EarlyAdopterThreshold,
     WhaleThreshold,
@@ -223,6 +227,16 @@ impl TipNftBadgeContract {
             .persistent()
             .set(&DataKey::BadgeRecord(badge_id.clone()), &metadata);
 
+        let receipt = receipts::BadgeMintReceipt {
+            badge_id: badge_id.clone(),
+            badge_type,
+            name: metadata.name.clone(),
+            description: metadata.description.clone(),
+            owner: user.clone(),
+            minted_at: metadata.minted_at,
+        };
+        receipts::set_badge_receipt(&env, &receipt);
+
         let mut user_badges: Vec<String> = env
             .storage()
             .persistent()
@@ -232,6 +246,8 @@ impl TipNftBadgeContract {
         env.storage()
             .persistent()
             .set(&DataKey::UserBadges(user.clone()), &user_badges);
+
+        receipts::append_user_receipt(&env, user.clone(), &badge_id);
 
         env.events()
             .publish((symbol_short!("badge"), symbol_short!("minted")), metadata);
@@ -257,6 +273,16 @@ impl TipNftBadgeContract {
             }
         }
         full_badges
+    }
+
+    /// Get user badge mint receipts in chronological order.
+    pub fn get_user_badge_receipts(env: Env, user: Address) -> Vec<BadgeMintReceipt> {
+        receipts::get_user_badge_receipts(&env, user)
+    }
+
+    /// Get badge mint receipt by badge ID.
+    pub fn get_badge_receipt(env: Env, badge_id: String) -> Option<BadgeMintReceipt> {
+        receipts::get_badge_receipt(&env, badge_id)
     }
 
     /// Get badge metadata by ID
