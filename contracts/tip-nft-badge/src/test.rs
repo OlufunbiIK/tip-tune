@@ -293,6 +293,54 @@ fn test_multiple_badges_per_user() {
 }
 
 #[test]
+fn test_badge_receipt_creation_and_query() {
+    let env = setup_env(1000);
+    let contract_id = env.register_contract(None, TipNftBadgeContract);
+    let client = TipNftBadgeContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    client.initialize(&admin, &10000, &5000);
+
+    let user = Address::generate(&env);
+    client.record_tip(&user, &100, &false);
+    let badge_id = client.mint_badge(&user, &BadgeType::FirstTip);
+
+    let receipt = client.get_badge_receipt(&badge_id).unwrap();
+    assert_eq!(receipt.badge_id, badge_id);
+    assert_eq!(receipt.owner, user);
+    assert_eq!(receipt.badge_type, BadgeType::FirstTip);
+    assert_eq!(receipt.minted_at, 1000);
+    assert_eq!(receipt.name, String::from_str(&env, "First Tip"));
+}
+
+#[test]
+fn test_user_badge_receipts_are_chronological() {
+    let env = setup_env(1000);
+    let contract_id = env.register_contract(None, TipNftBadgeContract);
+    let client = TipNftBadgeContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    client.initialize(&admin, &10000, &5000);
+
+    let user = Address::generate(&env);
+    for _ in 0..10 {
+        client.record_tip(&user, &100, &false);
+    }
+
+    let badge1 = client.mint_badge(&user, &BadgeType::FirstTip);
+    env.ledger().with_mut(|li| {
+        li.timestamp = 2000;
+    });
+    let badge2 = client.mint_badge(&user, &BadgeType::TenTips);
+
+    let receipts = client.get_user_badge_receipts(&user);
+    assert_eq!(receipts.len(), 2);
+    assert_eq!(receipts.get(0).unwrap().badge_id, badge1);
+    assert_eq!(receipts.get(1).unwrap().badge_id, badge2);
+    assert!(receipts.get(0).unwrap().minted_at < receipts.get(1).unwrap().minted_at);
+}
+
+#[test]
 fn test_user_with_no_badges() {
     let env = setup_env(1000);
     let contract_id = env.register_contract(None, TipNftBadgeContract);
