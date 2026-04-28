@@ -21,6 +21,7 @@ This directory is the primary entry point for repository documentation. Start he
 ## Smart contract docs
 
 - [Contracts overview](../contracts/README.md)
+- [Workspace package list](../contracts/WORKSPACE_OVERVIEW.md)
 - [Contracts quickstart](../contracts/QUICKSTART.md)
 - [Contracts testing and linting guide](../contracts/TESTING.md)
 - [Contributor checklist](../contracts/CHECKLIST.md)
