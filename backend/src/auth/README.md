@@ -2,6 +2,8 @@
 
 This module implements wallet-based authentication using Stellar blockchain signatures.
 
+> **Frontend/backend integration guide** (sequence diagram, request/response shapes, cookie behaviour, signature-format caveats, error reference): [`docs/wallet-auth-flow.md`](../../../../docs/wallet-auth-flow.md)
+
 ## Overview
 
 The authentication system uses a challenge-response mechanism where users sign a message with their Stellar wallet to prove ownership of their public key.
@@ -198,7 +200,8 @@ npm run test:e2e
 
 ## Notes
 
-- The signature format from Freighter wallet may need adjustment. The current implementation expects base64-encoded Ed25519 signatures.
+- **Signature format**: The backend expects a base64-encoded Ed25519 signature. Freighter's `signMessage` returns base64 directly. Albedo and xBull return raw bytes — encode to base64 before sending. The verifier also accepts hex as a fallback. See [`docs/wallet-auth-flow.md`](../../../../docs/wallet-auth-flow.md#step-2--sign-the-challenge) for per-wallet examples.
+- **Cookie behaviour**: Cookies are `httpOnly`, `sameSite: strict`, and `secure` in production only. They are not readable by JavaScript. Cross-origin setups may require switching to `sameSite: lax` or using the `Authorization` header.
+- **Refresh token storage**: Refresh tokens are stored in Redis (`auth:refresh:<tokenId>`, TTL 7 days). Challenges are stored under `auth:challenge:<id>` (TTL 5 min). Both are managed by `AuthRedisService`.
 - User accounts are automatically created on first authentication if they don't exist.
 - Username and email are auto-generated from the wallet address for new users.
-- Refresh tokens are stored in memory (Map). For production, consider using Redis or a database for distributed systems.
