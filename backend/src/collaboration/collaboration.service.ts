@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DataSource } from "typeorm";
+import { Repository, DataSource, In } from "typeorm";
 import {
   Collaboration,
   ApprovalStatus,
@@ -15,7 +15,7 @@ import { Artist } from "../artists/entities/artist.entity";
 import { UpdateCollaborationDto } from "./dto/update-collaboration.dto";
 import { UpdateApprovalDto } from "./dto/update-approval.dto";
 import { InviteCollaboratorsDto } from "./dto/invite-collaborators.dto";
-import { NotificationsService } from "../notifications/notifications.service";
+import { CollaborationSplitPolicy } from "./collaboration-split-policy";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
 @Injectable()
@@ -29,6 +29,8 @@ export class CollaborationService {
     private artistRepo: Repository<Artist>,
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
+    private collaborationOutboxService: CollaborationOutboxService,
+    private collaborationSplitPolicy: CollaborationSplitPolicy,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -57,43 +59,21 @@ export class CollaborationService {
         );
       }
 
-      // Validate total split percentage
-      const existingCollabs = await this.collaborationRepo.find({
-        where: {
-          trackId: dto.trackId,
-          approvalStatus: ApprovalStatus.APPROVED,
-        },
-      });
-
-      const existingSplit = existingCollabs.reduce(
-        (sum, collab) => sum + Number(collab.splitPercentage),
-        0,
-      );
-
-      const newSplit = dto.collaborators.reduce(
-        (sum, collab) => sum + collab.splitPercentage,
-        0,
-      );
-
-      // Primary artist should have implicit split
-      const totalSplit = existingSplit + newSplit;
-
-      if (totalSplit > 100) {
-        throw new BadRequestException(
-          `Total split percentage (${totalSplit}%) exceeds 100%. Remaining: ${100 - existingSplit}%`,
-        );
-      }
-
-      // Additional validation: ensure minimum split for primary artist
-      const primaryArtistSplit = 100 - totalSplit;
-      if (primaryArtistSplit < 0.01) {
-        throw new BadRequestException(
-          "Primary artist must retain at least 0.01% of split",
-        );
-      }
+      // Validate total split percentage using policy
+      const newSplits = dto.collaborators.map(c => c.splitPercentage);
+      await this.collaborationSplitPolicy.validateSplitReservation(dto.trackId, newSplits);
 
       // Create collaborations
       const collaborations: Collaboration[] = [];
+      const inviteEvents: Array<{
+        userId: string;
+        trackId: string;
+        trackTitle: string;
+        invitedBy: string;
+        role: string;
+        splitPercentage: number;
+        message?: string;
+      }> = [];
 
       for (const collabDto of dto.collaborators) {
         // Validate split percentage bounds
@@ -140,9 +120,9 @@ export class CollaborationService {
         const saved = await queryRunner.manager.save(collaboration);
         collaborations.push(saved);
 
-        // Send notification to the invited artist's user account
-        await this.notificationsService.sendCollaborationInvite({
-          userId: artist.userId, // Use userId instead of artistId
+        // Queue notification for post-commit dispatch
+        inviteEvents.push({
+          userId: artist.userId,
           trackId: track.id,
           trackTitle: track.title,
           invitedBy: track.artist.artistName,
@@ -153,6 +133,11 @@ export class CollaborationService {
       }
 
       await queryRunner.commitTransaction();
+
+      // Queue notifications post-commit
+      for (const event of inviteEvents) {
+        await this.collaborationOutboxService.queueInviteNotification(event);
+      }
 
       this.eventEmitter.emit("collaboration.invited", {
         trackId: dto.trackId,
@@ -203,9 +188,32 @@ export class CollaborationService {
 
     const updated = await this.collaborationRepo.save(collaboration);
 
-    // Notify track owner's user account
-    await this.notificationsService.sendCollaborationResponse({
-      userId: collaboration.track.artist.userId, // Use userId instead of artistId
+    // If approving, re-validate total split allocation
+    if (dto.approvalStatus === ApprovalStatus.APPROVED) {
+      const allCollabs = await this.collaborationRepo.find({
+        where: {
+          trackId: collaboration.trackId,
+          approvalStatus: In([ApprovalStatus.APPROVED, ApprovalStatus.PENDING]),
+        },
+      });
+
+      const totalSplit = allCollabs.reduce(
+        (sum, collab) => sum + Number(collab.splitPercentage),
+        0,
+      );
+
+      if (totalSplit > 100) {
+        // This should not happen if reservations are working, but safety check
+        throw new BadRequestException(
+          `Accepting this invitation would exceed total split limit. Total: ${totalSplit}%`,
+        );
+      }
+    }
+
+    // Queue notification post-commit
+    await this.collaborationOutboxService.queueResponseNotification({
+      collaborationId,
+      userId: collaboration.track.artist.userId,
       collaboratorName: collaboration.artist.artistName,
       trackTitle: collaboration.track.title,
       status: dto.approvalStatus,

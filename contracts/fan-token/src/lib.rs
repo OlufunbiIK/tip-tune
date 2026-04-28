@@ -41,12 +41,12 @@ impl FanTokenContract {
             return Err(Error::InvalidAmount);
         }
 
-        if max_supply < 0 {
-            return Err(Error::InvalidAmount);
+        if max_supply <= 0 {
+            return Err(Error::InvalidAmount); // Require max_supply > 0
         }
 
         // If a cap is set, initial_supply must not exceed it
-        if max_supply > 0 && initial_supply > max_supply {
+        if initial_supply > max_supply {
             return Err(Error::CapExceeded);
         }
 
@@ -72,6 +72,7 @@ impl FanTokenContract {
             created_at: now,
             max_supply,
             burned_supply: 0,
+            transfers_enabled: true, // Enable transfers by default
         };
 
         storage::set_fan_token(&env, &artist, &fan_token);
@@ -195,7 +196,13 @@ impl FanTokenContract {
 
         // Ensure the artist token exists
         if !storage::has_fan_token(&env, &artist) {
-            return Err(Error::TokenNotFound);
+         
+
+        let token = storage::get_fan_token(&env, &artist).ok_or(Error::TokenNotFound)?;
+
+        if !token.transfers_enabled {
+            return Err(Error::Unauthorized); // Use Unauthorized for transfer disabled
+        }   return Err(Error::TokenNotFound);
         }
 
         let now = env.ledger().timestamp();
@@ -384,6 +391,29 @@ impl FanTokenContract {
 
     /// List token holders for an artist without scanning storage.
     pub fn list_holders(env: Env, artist: Address, page: u32, page_size: u32) -> soroban_sdk::Vec<Address> {
+
+    // ── Transfer controls ────────────────────────────────────────────
+
+    /// Enable or disable transfers for the fan token.
+    ///
+    /// Only the artist can control transfer permissions.
+    pub fn set_transfers_enabled(env: Env, artist: Address, enabled: bool) -> Result<(), Error> {
+        artist.require_auth();
+
+        let mut token = storage::get_fan_token(&env, &artist).ok_or(Error::TokenNotFound)?;
+        token.transfers_enabled = enabled;
+        storage::set_fan_token(&env, &artist, &token);
+
+        events::transfers_updated(&env, &artist, enabled);
+
+        Ok(())
+    }
+
+    /// Check if transfers are enabled for the fan token.
+    pub fn are_transfers_enabled(env: Env, artist: Address) -> Result<bool, Error> {
+        let token = storage::get_fan_token(&env, &artist).ok_or(Error::TokenNotFound)?;
+        Ok(token.transfers_enabled)
+    }
         queries::list_holders(&env, &artist, page, page_size)
     }
 

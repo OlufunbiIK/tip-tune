@@ -65,3 +65,10 @@ pub fn trusted_minter_removed(env: &Env, artist: &Address, minter: &Address) {
         (artist.clone(), minter.clone()),
     );
 }
+
+pub fn transfers_updated(env: &Env, artist: &Address, enabled: bool) {
+    env.events().publish(
+        (symbol_short!("fan_tkn"), symbol_short!("xfer_ctrl")),
+        (artist.clone(), enabled),
+    );
+}

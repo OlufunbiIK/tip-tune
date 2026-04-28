@@ -352,7 +352,28 @@ export class PlaylistsController {
       duplicateDto,
     );
   }
-
+  @Post(":id/rebuild-stats")
+  @ApiOperation({ summary: "Rebuild playlist statistics from source data" })
+  @ApiParam({ name: "id", description: "Playlist ID to rebuild stats for" })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: "Playlist stats rebuilt successfully",
+    type: Playlist,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: "Playlist not found",
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: "Only playlist owners can rebuild stats",
+  })
+  async rebuildStats(
+    @Param("id", ParseUUIDPipe) playlistId: string,
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<Playlist> {
+    return this.playlistsService.rebuildStats(playlistId, user.id);
+  }
   @Post(":id/share")
   @ApiOperation({ summary: "Share a playlist (makes it public)" })
   @ApiParam({ name: "id", description: "Playlist ID" })

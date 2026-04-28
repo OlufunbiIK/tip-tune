@@ -13,7 +13,7 @@ import { UsersModule } from "../users/users.module";
 import { SmartPlaylistsService } from "./smart-playlists.service";
 import { SmartPlaylistsScheduler } from "./smart-playlists.scheduler";
 import { Follow } from "../follows/entities/follow.entity";
-import { PlaylistChangeRequestValidator } from "./playlist-change-request.validator";
+import { PlaylistStatsService } from "./playlist-stats.service";
 
 @Module({
   imports: [
@@ -35,7 +35,8 @@ import { PlaylistChangeRequestValidator } from "./playlist-change-request.valida
     SmartPlaylistsService,
     SmartPlaylistsScheduler,
     PlaylistChangeRequestValidator,
+    PlaylistStatsService,
   ],
-  exports: [PlaylistsService, SmartPlaylistsService],
+  exports: [PlaylistsService, SmartPlaylistsService, PlaylistStatsService],
 })
 export class PlaylistsModule {}

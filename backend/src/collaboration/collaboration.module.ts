@@ -5,7 +5,7 @@ import { CollaborationService } from "./collaboration.service";
 import { CollaborationController } from "./collaboration.controller";
 import { Track } from "../tracks/entities/track.entity";
 import { Artist } from "../artists/entities/artist.entity";
-import { NotificationsModule } from "../notifications/notifications.module";
+import { CollaborationSplitPolicy } from "./collaboration-split-policy";
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     NotificationsModule,
   ],
   controllers: [CollaborationController],
-  providers: [CollaborationService],
-  exports: [CollaborationService],
+  providers: [CollaborationService, CollaborationOutboxService, CollaborationSplitPolicy],
+  exports: [CollaborationService, CollaborationOutboxService, CollaborationSplitPolicy],
 })
 export class CollaborationModule {}
