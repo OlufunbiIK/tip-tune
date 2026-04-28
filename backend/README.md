@@ -8,6 +8,7 @@ A professional NestJS backend service for audio file upload, storage, and stream
 - [Backend API documentation](api-documentation.md)
 - [Backend testing guide](TESTING.md)
 - [Developer onboarding](dev-onboarding.md)
+- [Track licensing — license defaults, request lifecycle, state machine, notifications](src/track-listening-right-management/README.md)
 
 ## Features
 
