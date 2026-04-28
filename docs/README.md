@@ -11,6 +11,7 @@ This directory is the primary entry point for repository documentation. Start he
 
 ## Backend docs
 
+- [Wallet auth flow — integration guide](wallet-auth-flow.md)
 - [Backend API documentation](../backend/api-documentation.md)
 - [Backend testing guide](../backend/TESTING.md)
 - [Developer onboarding](../backend/dev-onboarding.md)
