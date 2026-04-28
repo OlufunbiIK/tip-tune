@@ -15,6 +15,8 @@ pub struct FanToken {
     pub max_supply: i128,
     /// Total tokens burned so far.
     pub burned_supply: i128,
+    /// Whether transfers are enabled for this token.
+    pub transfers_enabled: bool,
 }
 
 /// Represents a fan's balance of a specific artist's fan token.

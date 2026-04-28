@@ -38,10 +38,7 @@ import {
   PlaylistPaginationDto,
 } from "./dto/pagination.dto";
 import { DuplicatePlaylistDto } from "./dto/duplicate-playlist.dto";
-import {
-  PlaylistChangeRequestValidationResult,
-  PlaylistChangeRequestValidator,
-} from "./playlist-change-request.validator";
+import { CollaborationOutboxService } from "../collaboration/collaboration-outbox.service";
 
 @Injectable()
 export class PlaylistsService {
@@ -64,7 +61,7 @@ export class PlaylistsService {
     private readonly activitiesService: ActivitiesService,
     private readonly usersService: UsersService,
     private readonly changeRequestValidator: PlaylistChangeRequestValidator,
-  ) {}
+    private readonly playlistStatsService: PlaylistStatsService,
 
   /**
    * Create a new playlist
@@ -366,15 +363,26 @@ export class PlaylistsService {
 
       await this.playlistTrackRepository.save(playlistTracks);
 
-      // Update metadata
-      savedPlaylist.trackCount = playlistTracks.length;
-      savedPlaylist.totalDuration = originalPlaylist.totalDuration;
-      await this.playlistRepository.save(savedPlaylist);
+      await this.playlistStatsService.rebuildStats(savedPlaylist.id);
     }
 
     this.logger.log(`Playlist ${playlistId} duplicated as ${savedPlaylist.id}`);
 
     return this.findOne(savedPlaylist.id, userId);
+  }
+
+  /**
+   * Rebuild playlist statistics from source data
+   * This ensures counters stay in sync with actual playlist_tracks
+   */
+  async rebuildStats(playlistId: string, userId: string): Promise<Playlist> {
+    const playlist = await this.findOne(playlistId, userId);
+    if (playlist.userId !== userId) {
+      throw new ForbiddenException("Only owners can rebuild playlist stats");
+    }
+
+    await this.playlistStatsService.rebuildStats(playlistId);
+    return this.findOne(playlistId, userId);
   }
 
   /**
@@ -1301,9 +1309,7 @@ export class PlaylistsService {
 
     await this.playlistTrackRepository.save(playlistTrack);
 
-    playlist.trackCount += 1;
-    playlist.totalDuration += track.duration || 0;
-    await this.playlistRepository.save(playlist);
+    await this.playlistStatsService.rebuildStats(playlist.id);
 
     this.logger.log(
       `Track ${addTrackDto.trackId} added to playlist ${playlist.id} at position ${position}`,
@@ -1356,14 +1362,7 @@ export class PlaylistsService {
       .andWhere("position > :position", { position: removedPosition })
       .execute();
 
-    playlist.trackCount = Math.max(0, playlist.trackCount - 1);
-    if (playlistTrack.track) {
-      playlist.totalDuration = Math.max(
-        0,
-        playlist.totalDuration - (playlistTrack.track.duration || 0),
-      );
-    }
-    await this.playlistRepository.save(playlist);
+    await this.playlistStatsService.rebuildStats(playlistId);
 
     this.logger.log(`Track ${trackId} removed from playlist ${playlistId}`);
 
